@@ -21,6 +21,9 @@ public class PaymentDto {
 
     private LocalDateTime paymentDate;
 
+    private String razorpayOrderId;
+    private String razorpayPaymentId;
+
     @NotNull(message = "Booking ID is required")
     private Long bookingId;
 }

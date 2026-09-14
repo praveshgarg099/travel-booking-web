@@ -19,6 +19,7 @@ public class TravelPackage {
     private String title;
 
     @NotBlank
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @NotNull

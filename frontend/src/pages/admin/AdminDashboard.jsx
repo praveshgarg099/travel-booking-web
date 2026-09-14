@@ -4,10 +4,26 @@ import { packageService } from '../../services/packageService'
 import { destinationService } from '../../services/destinationService'
 import { authService } from '../../services/authService'
 import { bookingService } from '../../services/bookingService'
+import { paymentAdminService } from '../../services/paymentAdminService'
+import { reviewService } from '../../services/reviewService'
+import { formatCurrency } from '../../utils/formatters'
 import { seedBackendDatabase } from '../../data/demoData'
 import { useToast } from '../../context/ToastContext'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
-import { Package, MapPin, Users, Calendar, Plus, ShieldCheck, ArrowRight, Server, Database } from 'lucide-react'
+import {
+  Package,
+  MapPin,
+  Users,
+  Calendar,
+  Plus,
+  ShieldCheck,
+  ArrowRight,
+  Server,
+  Database,
+  CreditCard,
+  Star,
+  DollarSign
+} from 'lucide-react'
 
 export const AdminDashboard = () => {
   const toast = useToast()
@@ -16,6 +32,9 @@ export const AdminDashboard = () => {
     destinationsCount: 0,
     usersCount: 0,
     bookingsCount: 0,
+    paymentsCount: 0,
+    totalRevenue: 0,
+    reviewsCount: 0,
   })
   const [loading, setLoading] = useState(true)
   const [isSeeding, setIsSeeding] = useState(false)
@@ -23,18 +42,28 @@ export const AdminDashboard = () => {
   const fetchAdminStats = async () => {
     try {
       setLoading(true)
-      const [pkgs, dests, users, bookings] = await Promise.allSettled([
+      const [pkgs, dests, users, bookings, payments, reviews] = await Promise.allSettled([
         packageService.getAllPackages(),
         destinationService.getAllDestinations(),
         authService.getAllUsers(),
         bookingService.getAllBookings(),
+        paymentAdminService.getAllPayments(),
+        reviewService.getAllReviews(),
       ])
 
+      const paymentsList = payments.status === 'fulfilled' && Array.isArray(payments.value) ? payments.value : []
+      const revenue = paymentsList.reduce((acc, p) => {
+        return p.status === 'SUCCESS' ? acc + (Number(p.amount) || 0) : acc
+      }, 0)
+
       setStats({
-        packagesCount: pkgs.status === 'fulfilled' ? pkgs.value?.length || 0 : 0,
-        destinationsCount: dests.status === 'fulfilled' ? dests.value?.length || 0 : 0,
-        usersCount: users.status === 'fulfilled' ? users.value?.length || 0 : 0,
-        bookingsCount: bookings.status === 'fulfilled' ? bookings.value?.length || 0 : 0,
+        packagesCount: pkgs.status === 'fulfilled' && Array.isArray(pkgs.value) ? pkgs.value.length : 0,
+        destinationsCount: dests.status === 'fulfilled' && Array.isArray(dests.value) ? dests.value.length : 0,
+        usersCount: users.status === 'fulfilled' && Array.isArray(users.value) ? users.value.length : 0,
+        bookingsCount: bookings.status === 'fulfilled' && Array.isArray(bookings.value) ? bookings.value.length : 0,
+        paymentsCount: paymentsList.length,
+        totalRevenue: revenue,
+        reviewsCount: reviews.status === 'fulfilled' && Array.isArray(reviews.value) ? reviews.value.length : 0,
       })
     } catch (err) {
       console.error('Failed to load admin stats:', err)
@@ -66,12 +95,13 @@ export const AdminDashboard = () => {
 
   const statCards = [
     {
-      title: 'Travel Packages',
+      title: 'Packages',
       count: stats.packagesCount,
       icon: Package,
       color: 'var(--primary)',
       bg: 'var(--primary-light)',
       link: '/admin/packages',
+      subtext: 'Manage & Add Packages',
     },
     {
       title: 'Destinations',
@@ -80,6 +110,26 @@ export const AdminDashboard = () => {
       color: 'var(--emerald-dark)',
       bg: 'var(--emerald-light)',
       link: '/admin/destinations',
+      subtext: 'Cities & locations',
+    },
+    {
+      title: 'Total Bookings',
+      count: stats.bookingsCount,
+      icon: Calendar,
+      color: 'var(--slate-800)',
+      bg: 'var(--slate-100)',
+      link: '/admin/bookings',
+      subtext: 'Manage reservations',
+    },
+    {
+      title: 'Completed Revenue',
+      count: formatCurrency(stats.totalRevenue),
+      icon: DollarSign,
+      color: '#059669',
+      bg: '#dcfce7',
+      link: '/admin/payments',
+      subtext: `${stats.paymentsCount} transactions`,
+      isCurrency: true,
     },
     {
       title: 'Registered Users',
@@ -88,14 +138,16 @@ export const AdminDashboard = () => {
       color: '#b45309',
       bg: 'var(--amber-light)',
       link: '/admin/users',
+      subtext: 'View user accounts',
     },
     {
-      title: 'Total Bookings',
-      count: stats.bookingsCount,
-      icon: Calendar,
-      color: 'var(--slate-800)',
-      bg: 'var(--slate-100)',
-      link: '/bookings',
+      title: 'Traveler Reviews',
+      count: stats.reviewsCount,
+      icon: Star,
+      color: '#d97706',
+      bg: '#fef3c7',
+      link: '/admin/reviews',
+      subtext: 'Feedback & ratings',
     },
   ]
 
@@ -104,15 +156,15 @@ export const AdminDashboard = () => {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Administrator Console</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', marginTop: '0.25rem' }}>
-          Overview of database assets, live packages, and user accounts.
+          Real-time metrics connected directly to Spring Boot backend and PostgreSQL database.
         </p>
       </div>
 
-      {/* 4 Stats Cards */}
+      {/* 6 Stats Cards */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
           gap: '1.25rem',
           marginBottom: '2.5rem',
         }}
@@ -140,11 +192,11 @@ export const AdminDashboard = () => {
                   <Icon size={20} />
                 </div>
               </div>
-              <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+              <div style={{ fontSize: card.isCurrency ? '1.65rem' : '2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
                 {card.count}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                Manage {card.title} <ArrowRight size={14} />
+                {card.subtext} <ArrowRight size={14} />
               </div>
             </Link>
           )
@@ -157,30 +209,48 @@ export const AdminDashboard = () => {
           Quick Administration Actions
         </h2>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <Link to="/admin/packages" className="btn btn-primary btn-sm">
+          <Link
+            to="/admin/packages"
+            id="admin-dashboard-add-package-btn"
+            data-testid="admin-dashboard-add-package-btn"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
+          >
             <Plus size={16} />
-            Add Travel Package
+            + Add New Package
           </Link>
           <Link to="/admin/destinations" className="btn btn-secondary btn-sm">
             <Plus size={16} />
             Add Destination
           </Link>
+          <Link to="/admin/bookings" className="btn btn-secondary btn-sm">
+            <Calendar size={16} />
+            Inspect Bookings
+          </Link>
+          <Link to="/admin/payments" className="btn btn-secondary btn-sm">
+            <CreditCard size={16} />
+            Manage Payments
+          </Link>
           <Link to="/admin/users" className="btn btn-secondary btn-sm">
             <Users size={16} />
             Inspect User Accounts
           </Link>
-          <button 
-            onClick={handleSeed} 
+          <Link to="/admin/reviews" className="btn btn-secondary btn-sm">
+            <Star size={16} />
+            Moderate Reviews
+          </Link>
+          <button
+            onClick={handleSeed}
             disabled={isSeeding}
             className="btn btn-sm"
-            style={{ 
-              backgroundColor: 'var(--amber-light)', 
-              color: '#b45309', 
+            style={{
+              backgroundColor: 'var(--amber-light)',
+              color: '#b45309',
               border: '1px solid #fcd34d',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.4rem',
-              cursor: isSeeding ? 'not-allowed' : 'pointer'
+              cursor: isSeeding ? 'not-allowed' : 'pointer',
             }}
           >
             <Database size={16} />
@@ -205,7 +275,7 @@ export const AdminDashboard = () => {
           </h3>
         </div>
         <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          All create, update, and delete actions directly execute Spring Boot JPA transactions against your MySQL database. Role enforcement is validated on the backend by Spring Security.
+          All package, destination, user, booking, payment, and review records directly execute Spring Boot JPA transactions against PostgreSQL. Role enforcement is validated on the backend by Spring Security with JWT Bearer tokens.
         </p>
       </div>
     </div>

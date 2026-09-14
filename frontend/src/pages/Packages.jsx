@@ -48,9 +48,10 @@ export const Packages = () => {
   // Map destinationId to name
   const destinationMap = useMemo(() => {
     const map = {}
-    destinations.forEach((d, idx) => {
-      const id = d.id || idx + 1
-      map[id] = d.name
+    destinations.forEach((d) => {
+      if (d.id != null) {
+        map[d.id] = d.name
+      }
     })
     return map
   }, [destinations])

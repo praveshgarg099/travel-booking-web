@@ -41,7 +41,8 @@ export const Login = () => {
       })
 
       toast.success(`Welcome back, ${user.name}!`)
-      navigate(from, { replace: true })
+      const dest = location.state?.from?.pathname || (user.role === 'ADMIN' ? '/admin' : '/dashboard')
+      navigate(dest, { replace: true })
     } catch (err) {
       console.error('Login error:', err)
       setErrorMsg(err.message || 'Invalid email or password.')

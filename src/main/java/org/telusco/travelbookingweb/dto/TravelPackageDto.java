@@ -15,7 +15,7 @@ public class TravelPackageDto {
     private Long id;
     @NotBlank(message = "Title is required")
     private String title ;
-    @NotBlank(message = "description is required")
+    @NotBlank(message = "Description is required")
     private String description;
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be greater than 0")
@@ -30,4 +30,6 @@ public class TravelPackageDto {
     private Integer availableSeats;
     @NotNull(message = "Destination ID is required")
     private Long destinationId;
+    private String destinationName;
+    private String country;
 }

@@ -45,7 +45,7 @@ export const MyBookings = () => {
       setPackagesMap(map)
 
       if (paymentsData) {
-        setPaidBookingIds(new Set(paymentsData.map((p) => Number(p.bookingId))))
+        setPaidBookingIds(new Set(paymentsData.filter((p) => p.status === 'SUCCESS').map((p) => Number(p.bookingId))))
       }
     } catch (err) {
       console.error('Failed to load bookings:', err)
@@ -125,7 +125,7 @@ export const MyBookings = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {bookings.map((b) => {
             const pkg = packagesMap[b.travelPackageId]
-            const isPaid = paidBookingIds.has(Number(b.id))
+            const isPaid = paidBookingIds.has(Number(b.id)) || b.status === 'CONFIRMED'
 
             return (
               <div
@@ -205,7 +205,7 @@ export const MyBookings = () => {
                       Details
                     </Link>
 
-                    {!isPaid && (
+                    {b.status === 'PENDING_PAYMENT' && !isPaid && (
                       <Link to={`/checkout/${b.id}`} className="btn btn-primary btn-sm">
                         <CreditCard size={15} />
                         Pay Now

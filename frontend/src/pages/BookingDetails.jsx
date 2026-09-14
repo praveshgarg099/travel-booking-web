@@ -55,7 +55,8 @@ export const BookingDetails = () => {
       // Check if paid
       try {
         const payments = await paymentService.getAllPayments()
-        const match = payments.find((pay) => Number(pay.bookingId) === Number(b.id))
+        const match = payments.find((pay) => Number(pay.bookingId) === Number(b.id) && pay.status === 'SUCCESS')
+          || payments.find((pay) => Number(pay.bookingId) === Number(b.id))
         setPayment(match || null)
       } catch (err) {
         console.warn('Could not check payments:', err)
@@ -139,7 +140,7 @@ export const BookingDetails = () => {
     )
   }
 
-  const isPaid = Boolean(payment)
+  const isPaid = (payment && payment.status === 'SUCCESS') || booking.status === 'CONFIRMED'
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -251,8 +252,8 @@ export const BookingDetails = () => {
             style={{
               padding: '1.25rem 1.5rem',
               borderRadius: 'var(--radius-lg)',
-              border: `1.5px solid ${isPaid ? 'var(--emerald)' : 'var(--amber)'}`,
-              backgroundColor: isPaid ? 'var(--emerald-light)' : 'var(--amber-light)',
+              border: `1.5px solid ${isPaid ? 'var(--emerald)' : booking.status === 'CANCELLED' ? 'var(--rose)' : 'var(--amber)'}`,
+              backgroundColor: isPaid ? 'var(--emerald-light)' : booking.status === 'CANCELLED' ? 'var(--rose-light)' : 'var(--amber-light)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -265,21 +266,23 @@ export const BookingDetails = () => {
               {isPaid ? (
                 <CheckCircle2 size={24} color="var(--emerald-dark)" />
               ) : (
-                <AlertCircle size={24} color="#b45309" />
+                <AlertCircle size={24} color={booking.status === 'CANCELLED' ? 'var(--rose)' : '#b45309'} />
               )}
               <div>
-                <div style={{ fontWeight: 700, color: isPaid ? 'var(--emerald-dark)' : '#b45309', fontSize: '0.95rem' }}>
-                  {isPaid ? 'Payment Confirmed' : 'Payment Pending'}
+                <div style={{ fontWeight: 700, color: isPaid ? 'var(--emerald-dark)' : booking.status === 'CANCELLED' ? 'var(--rose)' : '#b45309', fontSize: '0.95rem' }}>
+                  {isPaid ? 'Payment Confirmed' : booking.status === 'CANCELLED' ? 'Booking Cancelled' : 'Payment Pending'}
                 </div>
                 <div style={{ fontSize: '0.825rem', color: 'var(--slate-700)' }}>
                   {isPaid
-                    ? `Payment ID #${payment.id} via ${payment.paymentMethod}`
-                    : 'Reserve this itinerary by completing the payment simulation.'}
+                    ? (payment ? `Payment ID #${payment.id} via ${payment.paymentMethod || 'Online'}` : 'Reservation is confirmed and verified.')
+                    : booking.status === 'CANCELLED'
+                    ? 'This booking was cancelled and is no longer active.'
+                    : 'Reserve this itinerary by completing the Razorpay payment.'}
                 </div>
               </div>
             </div>
 
-            {!isPaid && (
+            {!isPaid && booking.status === 'PENDING_PAYMENT' && (
               <Link to={`/checkout/${booking.id}`} className="btn btn-primary btn-sm">
                 <CreditCard size={16} />
                 Pay {formatCurrency(booking.totalAmount)}
@@ -300,7 +303,7 @@ export const BookingDetails = () => {
             }}
           >
             <div>
-              {!isPaid && (
+              {!isPaid && booking.status !== 'CANCELLED' && (
                 <button
                   onClick={() => setIsEditing(true)}
                   className="btn btn-secondary btn-sm"

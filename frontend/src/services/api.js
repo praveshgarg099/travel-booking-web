@@ -52,6 +52,9 @@ api.interceptors.response.use(
       case 404:
         userMessage = serverMessage || 'The requested resource was not found.'
         break
+      case 409:
+        userMessage = serverMessage || 'This item cannot be modified or deleted because it is referenced by existing bookings or reviews.'
+        break
       case 500:
         userMessage = serverMessage || 'Something went wrong. Please try again.'
         break

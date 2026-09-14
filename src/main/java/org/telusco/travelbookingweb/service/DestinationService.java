@@ -26,34 +26,35 @@ public class DestinationService {
          Destination savedDestination = destinationRepository.save(destination);
 
          DestinationDto response = new DestinationDto();
+         response.setId(savedDestination.getId());
          response.setName(savedDestination.getName());
          response.setCountry(savedDestination.getCountry());
          response.setDescription(savedDestination.getDescription());
          return response;
-
-
-
     }
 
     public List<DestinationDto> getAllDestination(){
        List<Destination> destinations = destinationRepository.findAll();
        return destinations.stream().map(destination -> {
            DestinationDto dto = new DestinationDto();
+           dto.setId(destination.getId());
            dto.setName(destination.getName());
            dto.setCountry(destination.getCountry());
            dto.setDescription(destination.getDescription());
            return dto;
        }).toList();
     }
+
     public DestinationDto getDestinationById(Long Id){
        Destination destination = destinationRepository.findById(Id).orElseThrow(()-> new DestinationNotFoundException("Destination is not there"));
        DestinationDto dto = new DestinationDto();
-        dto.setName(destination.getName());
-        dto.setCountry(destination.getCountry());
-        dto.setDescription(destination.getDescription());
-        return dto;
-
+       dto.setId(destination.getId());
+       dto.setName(destination.getName());
+       dto.setCountry(destination.getCountry());
+       dto.setDescription(destination.getDescription());
+       return dto;
     }
+
     public DestinationDto updateDestination(Long id, DestinationDto destinationDto){
         Destination existingDestination = destinationRepository.findById(id).orElseThrow(()-> new DestinationNotFoundException(("Destination not found")));
         existingDestination.setName(destinationDto.getName());
@@ -61,13 +62,12 @@ public class DestinationService {
         existingDestination.setDescription(destinationDto.getDescription());
         Destination savedDestination = destinationRepository.save(existingDestination);
 
-        DestinationDto responce  = new DestinationDto();
-
-        responce.setName(savedDestination.getName());
-        responce.setCountry(savedDestination.getCountry());
-        responce.setDescription(savedDestination.getDescription());
-        return responce;
-
+        DestinationDto response = new DestinationDto();
+        response.setId(savedDestination.getId());
+        response.setName(savedDestination.getName());
+        response.setCountry(savedDestination.getCountry());
+        response.setDescription(savedDestination.getDescription());
+        return response;
     }
     public void deleteDestination(Long id){
         Destination existingDestination = destinationRepository.findById(id).orElseThrow(()-> new DestinationNotFoundException("destination is not found"));

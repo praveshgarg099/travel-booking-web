@@ -25,6 +25,7 @@ export const PackageFormModal = ({
   const [destinations, setDestinations] = useState([])
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
 
   // Load available destinations for dropdown
   useEffect(() => {
@@ -58,19 +59,49 @@ export const PackageFormModal = ({
       })
     }
     setErrorMsg('')
+    setFieldErrors({})
   }, [packageData, isOpen])
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  const validateForm = () => {
+    const errors = {}
+    if (!formData.title || !formData.title.trim()) {
+      errors.title = 'Package title is required.'
+    }
+    if (!formData.destinationId) {
+      errors.destinationId = 'Please select a destination.'
+    }
+    const numPrice = parseFloat(formData.price)
+    if (formData.price === '' || isNaN(numPrice) || numPrice <= 0) {
+      errors.price = 'Price must be greater than 0.'
+    }
+    const numDuration = parseInt(formData.duration, 10)
+    if (formData.duration === '' || isNaN(numDuration) || numDuration <= 0) {
+      errors.duration = 'Duration must be at least 1 day.'
+    }
+    const numSeats = parseInt(formData.availableSeats, 10)
+    if (formData.availableSeats === '' || isNaN(numSeats) || numSeats < 0) {
+      errors.availableSeats = 'Available seats cannot be negative.'
+    }
+    if (!formData.description || !formData.description.trim()) {
+      errors.description = 'Description is required.'
+    }
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrorMsg('')
 
-    if (!formData.destinationId) {
-      setErrorMsg('Please select a destination.')
+    if (!validateForm()) {
       return
     }
 
@@ -98,8 +129,9 @@ export const PackageFormModal = ({
       onClose()
     } catch (err) {
       console.error('Error saving package:', err)
-      setErrorMsg(err.message || 'Failed to save travel package.')
-      toast.error(err.message || 'Failed to save travel package.')
+      const msg = err.response?.data?.message || err.message || 'Failed to save travel package.'
+      setErrorMsg(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -112,7 +144,7 @@ export const PackageFormModal = ({
       title={isEditing ? 'Edit Travel Package' : 'Create Travel Package'}
       maxWidth="620px"
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         {errorMsg && (
           <div
             style={{
@@ -122,6 +154,7 @@ export const PackageFormModal = ({
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',
               marginBottom: '1rem',
+              fontWeight: 500,
             }}
           >
             {errorMsg}
@@ -142,7 +175,13 @@ export const PackageFormModal = ({
             onChange={handleChange}
             required
             disabled={loading}
+            style={fieldErrors.title ? { borderColor: 'var(--rose)' } : {}}
           />
+          {fieldErrors.title && (
+            <span style={{ color: 'var(--rose)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+              {fieldErrors.title}
+            </span>
+          )}
         </div>
 
         <div className="form-group">
@@ -157,17 +196,20 @@ export const PackageFormModal = ({
             onChange={handleChange}
             required
             disabled={loading}
+            style={fieldErrors.destinationId ? { borderColor: 'var(--rose)' } : {}}
           >
             <option value="">-- Choose Destination --</option>
-            {destinations.map((dest, idx) => {
-              const dId = dest.id || idx + 1
-              return (
-                <option key={dId} value={dId}>
-                  {dest.name} {dest.country ? `(${dest.country})` : ''}
-                </option>
-              )
-            })}
+            {destinations.map((dest) => (
+              <option key={dest.id} value={dest.id}>
+                {dest.name} {dest.country ? `(${dest.country})` : ''}
+              </option>
+            ))}
           </select>
+          {fieldErrors.destinationId && (
+            <span style={{ color: 'var(--rose)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+              {fieldErrors.destinationId}
+            </span>
+          )}
           {destinations.length === 0 && (
             <span className="form-hint" style={{ color: 'var(--amber)' }}>
               No destinations found. Please create a destination first in "Manage Destinations".
@@ -178,21 +220,27 @@ export const PackageFormModal = ({
         <div className="grid-3" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label" htmlFor="price">
-              Price (USD) *
+              Price (₹) *
             </label>
             <input
               id="price"
               name="price"
               type="number"
               min="1"
-              step="0.01"
-              placeholder="e.g. 1499"
+              step="any"
+              placeholder="e.g. 45000"
               className="form-control"
               value={formData.price}
               onChange={handleChange}
               required
               disabled={loading}
+              style={fieldErrors.price ? { borderColor: 'var(--rose)' } : {}}
             />
+            {fieldErrors.price && (
+              <span style={{ color: 'var(--rose)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+                {fieldErrors.price}
+              </span>
+            )}
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
@@ -210,7 +258,13 @@ export const PackageFormModal = ({
               onChange={handleChange}
               required
               disabled={loading}
+              style={fieldErrors.duration ? { borderColor: 'var(--rose)' } : {}}
             />
+            {fieldErrors.duration && (
+              <span style={{ color: 'var(--rose)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+                {fieldErrors.duration}
+              </span>
+            )}
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
@@ -228,7 +282,13 @@ export const PackageFormModal = ({
               onChange={handleChange}
               required
               disabled={loading}
+              style={fieldErrors.availableSeats ? { borderColor: 'var(--rose)' } : {}}
             />
+            {fieldErrors.availableSeats && (
+              <span style={{ color: 'var(--rose)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+                {fieldErrors.availableSeats}
+              </span>
+            )}
           </div>
         </div>
 
@@ -246,7 +306,13 @@ export const PackageFormModal = ({
             onChange={handleChange}
             required
             disabled={loading}
+            style={fieldErrors.description ? { borderColor: 'var(--rose)' } : {}}
           />
+          {fieldErrors.description && (
+            <span style={{ color: 'var(--rose)', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+              {fieldErrors.description}
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>

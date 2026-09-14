@@ -37,3 +37,7 @@ build/
 # Local secrets
 application-local.properties
 .env
+
+# Scratch and third-party tools
+scratch/
+linkedin-skills/

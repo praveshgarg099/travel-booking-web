@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -20,6 +21,7 @@ public class Booking {
     private Integer numberOfPeople;
     private Double totalAmount;
     private LocalDate bookingDate;
+    private LocalDateTime expiresAt;
     @Enumerated(EnumType.STRING)
     private BookingStatus status;
 

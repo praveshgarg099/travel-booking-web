@@ -1,5 +1,5 @@
 import React from 'react'
-import { Navigate, useLocation, Link } from 'react-router-dom'
+import { Navigate, useLocation, Link, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ShieldAlert, ArrowLeft } from 'lucide-react'
 
@@ -31,7 +31,8 @@ export const AdminRoute = ({ children }) => {
     )
   }
 
-  return children
+  return children ? children : <Outlet />
 }
 
 export default AdminRoute
+

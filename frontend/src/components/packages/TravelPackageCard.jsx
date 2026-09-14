@@ -18,6 +18,7 @@ export const TravelPackageCard = ({ pkg, destinationName = '' }) => {
         <img
           src={imageUrl}
           alt={pkg.title}
+          className="zoom-img"
           style={{
             width: '100%',
             height: '100%',

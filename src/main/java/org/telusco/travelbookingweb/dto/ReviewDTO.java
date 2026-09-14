@@ -23,4 +23,7 @@ public class ReviewDTO {
 
     @NotNull(message = "Travel package ID is required")
     private Long travelPackageId;
+
+    private String customerName;
+    private String packageTitle;
 }

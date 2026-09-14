@@ -25,8 +25,11 @@ import MyReviews from '../pages/MyReviews'
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard'
 import ManagePackages from '../pages/admin/ManagePackages'
-import ManageDestinations from '../pages/admin/ManageDestinations'
-import ManageUsers from '../pages/admin/ManageUsers'
+import { ManageDestinations } from '../pages/admin/ManageDestinations'
+import { ManageUsers } from '../pages/admin/ManageUsers'
+import { ManagePayments } from '../pages/admin/ManagePayments'
+import { ManageBookings } from '../pages/admin/ManageBookings'
+import { ManageReviews } from '../pages/admin/ManageReviews'
 
 import { Compass } from 'lucide-react'
 
@@ -109,7 +112,10 @@ export const AppRoutes = () => {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/packages" element={<ManagePackages />} />
         <Route path="/admin/destinations" element={<ManageDestinations />} />
+        <Route path="/admin/bookings" element={<ManageBookings />} />
+        <Route path="/admin/payments" element={<ManagePayments />} />
         <Route path="/admin/users" element={<ManageUsers />} />
+        <Route path="/admin/reviews" element={<ManageReviews />} />
       </Route>
     </Routes>
   )

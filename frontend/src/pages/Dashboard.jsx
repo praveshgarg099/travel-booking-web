@@ -57,7 +57,7 @@ export const Dashboard = () => {
   }, [user])
 
   // Paid booking IDs set
-  const paidBookingIds = new Set(payments.map((p) => Number(p.bookingId)))
+  const paidBookingIds = new Set(payments.filter((p) => p.status === 'SUCCESS').map((p) => Number(p.bookingId)))
 
   if (loading) {
     return <LoadingSpinner message="Loading your dashboard..." fullPage />
@@ -198,7 +198,7 @@ export const Dashboard = () => {
                 </thead>
                 <tbody>
                   {bookings.slice(0, 5).map((booking) => {
-                    const isPaid = paidBookingIds.has(Number(booking.id))
+                    const isPaid = paidBookingIds.has(Number(booking.id)) || booking.status === 'CONFIRMED'
                     const packageName = packagesMap[booking.travelPackageId] || `Package #${booking.travelPackageId}`
                     return (
                       <tr key={booking.id}>
@@ -217,15 +217,15 @@ export const Dashboard = () => {
                             <Link to={`/bookings/${booking.id}`} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.65rem' }}>
                               Details
                             </Link>
-                            {!isPaid ? (
+                            {booking.status === 'PENDING_PAYMENT' && !isPaid ? (
                               <Link to={`/checkout/${booking.id}`} className="btn btn-primary btn-sm" style={{ padding: '0.25rem 0.65rem' }}>
                                 Pay Now
                               </Link>
-                            ) : (
+                            ) : isPaid ? (
                               <span className="badge badge-success" style={{ padding: '0.3rem 0.5rem' }}>
                                 Paid
                               </span>
-                            )}
+                            ) : null}
                           </div>
                         </td>
                       </tr>

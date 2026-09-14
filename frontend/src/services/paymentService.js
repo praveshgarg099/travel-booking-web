@@ -20,6 +20,20 @@ export const paymentService = {
     return response.data
   },
 
+  // Create Razorpay Order (backend computes authoritative amount from booking)
+  // Payload: { bookingId }
+  createOrder: async (bookingId) => {
+    const response = await api.post('/api/payments/create-order', { bookingId })
+    return response.data
+  },
+
+  // Verify Razorpay Payment (cryptographic signature & backend verification)
+  // Payload: { bookingId, razorpayOrderId, razorpayPaymentId, razorpaySignature }
+  verifyPayment: async (verificationData) => {
+    const response = await api.post('/api/payments/verify', verificationData)
+    return response.data
+  },
+
   // Delete payment
   deletePayment: async (id) => {
     const response = await api.delete(`/api/payments/${id}`)

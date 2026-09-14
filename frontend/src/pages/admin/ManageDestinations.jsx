@@ -43,11 +43,8 @@ export const ManageDestinations = () => {
     setIsModalOpen(true)
   }
 
-  const handleOpenEdit = (dest, idx) => {
-    setEditingDestination({
-      ...dest,
-      id: dest.id || idx + 1,
-    })
+  const handleOpenEdit = (dest) => {
+    setEditingDestination(dest)
     setIsModalOpen(true)
   }
 
@@ -57,7 +54,7 @@ export const ManageDestinations = () => {
       setDeleteLoading(true)
       await destinationService.deleteDestination(deleteTargetId)
       toast.success('Destination deleted.')
-      setDestinations((prev) => prev.filter((d, idx) => (d.id || idx + 1) !== deleteTargetId))
+      setDestinations((prev) => prev.filter((d) => d.id !== deleteTargetId))
       setDeleteTargetId(null)
     } catch (err) {
       console.error('Delete destination error:', err)
@@ -145,10 +142,9 @@ export const ManageDestinations = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((dest, idx) => {
-                  const targetId = dest.id || idx + 1
+                {filtered.map((dest) => {
                   return (
-                    <tr key={targetId}>
+                    <tr key={dest.id}>
                       <td style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{dest.name}</td>
                       <td>
                         <span className="badge badge-primary">{dest.country}</span>
@@ -159,7 +155,7 @@ export const ManageDestinations = () => {
                       <td>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button
-                            onClick={() => handleOpenEdit(dest, idx)}
+                            onClick={() => handleOpenEdit(dest)}
                             className="btn btn-secondary btn-sm"
                             title="Edit destination"
                           >
@@ -167,7 +163,7 @@ export const ManageDestinations = () => {
                             Edit
                           </button>
                           <button
-                            onClick={() => setDeleteTargetId(targetId)}
+                            onClick={() => setDeleteTargetId(dest.id)}
                             className="btn btn-danger btn-sm"
                             title="Delete destination"
                           >

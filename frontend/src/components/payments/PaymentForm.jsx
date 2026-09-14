@@ -1,21 +1,20 @@
 import React, { useState } from 'react'
 import { paymentService } from '../../services/paymentService'
+import { loadRazorpayScript } from '../../utils/loadRazorpay'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { useToast } from '../../context/ToastContext'
 import { CreditCard, Smartphone, Banknote, Building2, ShieldCheck, CheckCircle2, Lock } from 'lucide-react'
 
 export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
   const toast = useToast()
-  const [paymentMethod, setPaymentMethod] = useState('UPI')
+  const [paymentMethod, setPaymentMethod] = useState('ONLINE')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [completedPayment, setCompletedPayment] = useState(null)
 
   const methods = [
-    { id: 'UPI', label: 'UPI / QR', icon: Smartphone, desc: 'Google Pay, PhonePe, Paytm' },
-    { id: 'CARD', label: 'Credit / Debit Card', icon: CreditCard, desc: 'Visa, Mastercard, RuPay' },
-    { id: 'NET_BANKING', label: 'Net Banking', icon: Building2, desc: 'All major banks' },
-    { id: 'CASH', label: 'Cash on Arrival', icon: Banknote, desc: 'Pay at travel desk' },
+    { id: 'ONLINE', label: 'Razorpay Secure Checkout', icon: Smartphone, desc: 'Cards, UPI, Net Banking, Wallets (Instant)' },
+    { id: 'CASH', label: 'Cash on Arrival', icon: Banknote, desc: 'Pay manually at travel desk upon arrival' },
   ]
 
   const handlePay = async (e) => {
@@ -24,23 +23,109 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
     setLoading(true)
 
     try {
-      const payload = {
-        paymentMethod,
-        bookingId: booking.id,
+      if (booking?.status === 'CONFIRMED') {
+        setErrorMsg('This booking has already been paid for and confirmed.')
+        setLoading(false)
+        return
+      }
+      if (booking?.status === 'CANCELLED') {
+        setErrorMsg('Cannot make a payment for a cancelled booking.')
+        setLoading(false)
+        return
       }
 
-      const response = await paymentService.createPayment(payload)
-      setCompletedPayment(response)
-      toast.success('Payment submitted successfully!')
-
-      if (onPaymentSuccess) {
-        onPaymentSuccess(response)
+      if (paymentMethod === 'CASH') {
+        // Cash on Arrival fallback
+        const payload = {
+          paymentMethod: 'CASH',
+          bookingId: booking.id,
+        }
+        const response = await paymentService.createPayment(payload)
+        setCompletedPayment(response)
+        toast.success('Reservation saved with Cash on Arrival!')
+        if (onPaymentSuccess) {
+          onPaymentSuccess(response)
+        }
+        return
       }
+
+      // 1. Load Razorpay script
+      const isLoaded = await loadRazorpayScript()
+      if (!isLoaded) {
+        throw new Error('Could not load Razorpay payment SDK. Please check your internet connection.')
+      }
+
+      // 2. Create authoritative Razorpay order via backend
+      const orderData = await paymentService.createOrder(booking.id)
+
+      // 3. Configure Razorpay options
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amountPaise,
+        currency: orderData.currency || 'INR',
+        name: 'Travel Booking Web',
+        description: orderData.packageTitle || 'Travel Package Reservation',
+        order_id: orderData.orderId,
+        prefill: {
+          name: orderData.customerName || '',
+          email: orderData.customerEmail || '',
+        },
+        theme: {
+          color: '#0284c7',
+        },
+        handler: async function (response) {
+          try {
+            setLoading(true)
+            const verifyPayload = {
+              bookingId: booking.id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }
+
+            const verificationResult = await paymentService.verifyPayment(verifyPayload)
+            setCompletedPayment({
+              id: verificationResult.paymentId,
+              razorpayPaymentId: verificationResult.razorpayPaymentId,
+              amount: orderData.amount,
+              paymentMethod: verificationResult.paymentMethod,
+              status: verificationResult.status,
+            })
+            toast.success('Payment verified and booking confirmed successfully!')
+            if (onPaymentSuccess) {
+              onPaymentSuccess(verificationResult)
+            }
+          } catch (verifyErr) {
+            console.error('Verification failed:', verifyErr)
+            const msg = verifyErr.response?.data?.message || verifyErr.message || 'Payment verification failed'
+            setErrorMsg(msg)
+            toast.error(msg)
+          } finally {
+            setLoading(false)
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setLoading(false)
+            toast.info('Payment window closed. You can retry payment anytime before reservation expires.')
+          },
+        },
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', function (resp) {
+        setLoading(false)
+        const failureDesc = resp.error?.description || 'Payment was unsuccessful.'
+        setErrorMsg(failureDesc)
+        toast.error(`Payment failed: ${failureDesc}`)
+      })
+
+      rzp.open()
     } catch (err) {
-      console.error('Payment error:', err)
-      setErrorMsg(err.message || 'Payment processing failed.')
-      toast.error(err.message || 'Payment processing failed.')
-    } finally {
+      console.error('Payment initiation error:', err)
+      const msg = err.response?.data?.message || err.message || 'Payment processing failed.'
+      setErrorMsg(msg)
+      toast.error(msg)
       setLoading(false)
     }
   }
@@ -65,10 +150,10 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
           <CheckCircle2 size={36} />
         </div>
         <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--slate-900)' }}>
-          Payment Processed
+          Payment Confirmed!
         </h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-          Thank you! Your payment for Booking #{booking.id} has been recorded by the server.
+          Thank you! Your payment for Booking #{booking.id} has been cryptographically verified and confirmed.
         </p>
 
         <div
@@ -85,6 +170,14 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
             <span style={{ color: 'var(--text-muted)' }}>Payment ID:</span>
             <span style={{ fontWeight: 700 }}>#{completedPayment.id}</span>
           </div>
+          {completedPayment.razorpayPaymentId && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Razorpay Payment ID:</span>
+              <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                {completedPayment.razorpayPaymentId}
+              </span>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ color: 'var(--text-muted)' }}>Amount Paid:</span>
             <span style={{ fontWeight: 700, color: 'var(--emerald-dark)' }}>
@@ -97,7 +190,7 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: 'var(--text-muted)' }}>Status:</span>
-            <span className="badge badge-success">{completedPayment.status || 'CONFIRMED'}</span>
+            <span className="badge badge-success">{completedPayment.status || 'SUCCESS'}</span>
           </div>
         </div>
 
@@ -181,13 +274,13 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
               alignItems: 'baseline',
             }}
           >
-            <span style={{ fontWeight: 700, color: 'var(--slate-800)' }}>Amount Calculated by Backend:</span>
+            <span style={{ fontWeight: 700, color: 'var(--slate-800)' }}>Total Amount:</span>
             <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
               {formatCurrency(booking.totalAmount)}
             </span>
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-            * This amount is strictly determined by your Spring Boot server calculation.
+            * This amount is authoritatively calculated by your backend server.
           </p>
         </div>
 
@@ -195,7 +288,7 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
         <form onSubmit={handlePay}>
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>
             <label className="form-label" style={{ marginBottom: '0.75rem' }}>
-              Select Payment Method
+              Select Payment Gateway / Method
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
               {methods.map((method) => {
@@ -249,7 +342,7 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
           >
             <Lock size={18} />
             <span>
-              {loading ? 'Processing Payment...' : `Pay ${formatCurrency(booking.totalAmount)}`}
+              {loading ? 'Connecting to Gateway...' : `Proceed to Pay ${formatCurrency(booking.totalAmount)}`}
             </span>
           </button>
 
@@ -266,7 +359,7 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
             }}
           >
             <ShieldCheck size={16} color="var(--emerald)" />
-            <span>Demo payment integration using your Spring Boot REST backend</span>
+            <span>Secured with Razorpay 256-bit encryption and backend cryptographic HMAC verification</span>
           </div>
         </form>
       </div>

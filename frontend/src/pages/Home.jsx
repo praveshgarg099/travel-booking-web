@@ -50,7 +50,7 @@ export const Home = () => {
   // Helper to map destination ID to name
   const getDestinationName = (destId) => {
     if (!destId || destinations.length === 0) return ''
-    const found = destinations.find((d, idx) => (d.id || idx + 1) === Number(destId))
+    const found = destinations.find((d) => Number(d.id) === Number(destId))
     return found ? `${found.name}` : ''
   }
 
@@ -259,7 +259,7 @@ export const Home = () => {
               </Link>
             </div>
           ) : (
-            <div className="grid-3">
+            <div className="grid-3 animate-fade-in-up delay-200">
               {packages.slice(0, 6).map((pkg) => (
                 <TravelPackageCard
                   key={pkg.id}
@@ -304,7 +304,7 @@ export const Home = () => {
           >
             {/* Feature 1 */}
             <div
-              className="card"
+              className="card animate-fade-in-up"
               style={{
                 padding: '2rem',
                 textAlign: 'center',
@@ -334,7 +334,7 @@ export const Home = () => {
 
             {/* Feature 2 */}
             <div
-              className="card"
+              className="card animate-fade-in-up delay-100"
               style={{
                 padding: '2rem',
                 textAlign: 'center',
@@ -364,7 +364,7 @@ export const Home = () => {
 
             {/* Feature 3 */}
             <div
-              className="card"
+              className="card animate-fade-in-up delay-200"
               style={{
                 padding: '2rem',
                 textAlign: 'center',
@@ -394,7 +394,7 @@ export const Home = () => {
 
             {/* Feature 4 */}
             <div
-              className="card"
+              className="card animate-fade-in-up delay-300"
               style={{
                 padding: '2rem',
                 textAlign: 'center',
@@ -446,7 +446,7 @@ export const Home = () => {
               </h2>
             </div>
 
-            <div className="grid-3">
+            <div className="grid-3 animate-fade-in-up delay-200">
               {reviews.slice(0, 3).map((rev) => (
                 <ReviewCard key={rev.id} review={rev} />
               ))}

@@ -56,14 +56,11 @@ export const PackageFilters = ({
             onChange={(e) => onDestinationChange(e.target.value)}
           >
             <option value="">All Destinations</option>
-            {destinations.map((dest, idx) => {
-              const destId = dest.id || idx + 1
-              return (
-                <option key={destId} value={destId}>
-                  {dest.name} {dest.country ? `(${dest.country})` : ''}
-                </option>
-              )
-            })}
+            {destinations.map((dest) => (
+              <option key={dest.id} value={dest.id}>
+                {dest.name} {dest.country ? `(${dest.country})` : ''}
+              </option>
+            ))}
           </select>
         </div>
 

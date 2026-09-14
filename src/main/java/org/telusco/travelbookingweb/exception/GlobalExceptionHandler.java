@@ -150,4 +150,39 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
     }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException exception) {
+
+        return new ErrorResponse(
+                409,
+                "Cannot complete operation because this record is referenced by existing bookings, reviews, or packages."
+        );
+    }
+
+    @ExceptionHandler(PaymentVerificationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handlePaymentVerificationException(PaymentVerificationException exception) {
+        return new ErrorResponse(400, exception.getMessage());
+    }
+
+    @ExceptionHandler(BookingExpiredException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleBookingExpiredException(BookingExpiredException exception) {
+        return new ErrorResponse(400, exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidPaymentStateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidPaymentStateException(InvalidPaymentStateException exception) {
+        return new ErrorResponse(400, exception.getMessage());
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException exception) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage()));
+    }
 }

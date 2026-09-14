@@ -2,14 +2,17 @@ import React from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import Navbar from '../components/common/Navbar'
 import Footer from '../components/common/Footer'
-import { ShieldCheck, Package, MapPin, Users, LayoutDashboard, AlertTriangle } from 'lucide-react'
+import { ShieldCheck, Package, MapPin, Users, LayoutDashboard, AlertTriangle, CreditCard, Calendar, Star } from 'lucide-react'
 
 export const AdminLayout = () => {
   const adminNavItems = [
     { to: '/admin', label: 'Admin Overview', icon: LayoutDashboard, end: true },
-    { to: '/admin/packages', label: 'Manage Packages', icon: Package },
+    { to: '/admin/packages', label: 'Packages', icon: Package },
     { to: '/admin/destinations', label: 'Manage Destinations', icon: MapPin },
+    { to: '/admin/bookings', label: 'Manage Bookings', icon: Calendar },
+    { to: '/admin/payments', label: 'Manage Payments', icon: CreditCard },
     { to: '/admin/users', label: 'Manage Users', icon: Users },
+    { to: '/admin/reviews', label: 'Manage Reviews', icon: Star },
   ]
 
   return (

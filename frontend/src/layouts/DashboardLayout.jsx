@@ -1,9 +1,9 @@
 import React from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Link, Outlet } from 'react-router-dom'
 import Navbar from '../components/common/Navbar'
 import Footer from '../components/common/Footer'
 import { useAuth } from '../context/AuthContext'
-import { LayoutDashboard, Calendar, CreditCard, User, Star } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, User, Star, ShieldCheck } from 'lucide-react'
 
 export const DashboardLayout = () => {
   const { user } = useAuth()
@@ -21,6 +21,30 @@ export const DashboardLayout = () => {
       <Navbar />
       <div style={{ flex: 1, backgroundColor: 'var(--bg-main)', padding: '2.5rem 0' }}>
         <div className="container">
+          {user?.role === 'ADMIN' && (
+            <div
+              style={{
+                backgroundColor: 'var(--primary-light)',
+                border: '1.5px solid var(--primary)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem 1.25rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-dark)', fontWeight: 600 }}>
+                <ShieldCheck size={18} />
+                <span>Administrator Session Active</span>
+              </div>
+              <Link to="/admin/packages" id="traveler-dashboard-admin-packages-link" className="btn btn-primary btn-sm">
+                + Add New Package / Manage Packages →
+              </Link>
+            </div>
+          )}
           {/* Welcome header banner */}
           <div
             className="card"

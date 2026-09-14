@@ -1,8 +1,7 @@
 package org.telusco.travelbookingweb.dto;
 
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -18,5 +17,7 @@ public class UserDto {
     @Email(message = "Invalid email format")
     private String email;
     @NotNull(message = "Password is requird")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+    private String role;
 }

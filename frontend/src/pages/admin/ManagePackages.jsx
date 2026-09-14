@@ -46,9 +46,10 @@ export const ManagePackages = () => {
     fetchData()
   }, [])
 
-  const destinationMap = destinations.reduce((acc, d, idx) => {
-    const id = d.id || idx + 1
-    acc[id] = d.name
+  const destinationMap = destinations.reduce((acc, d) => {
+    if (d.id != null) {
+      acc[d.id] = d.name
+    }
     return acc
   }, {})
 
@@ -92,14 +93,6 @@ export const ManagePackages = () => {
     )
   })
 
-  if (loading) {
-    return <LoadingSpinner message="Loading travel packages..." fullPage />
-  }
-
-  if (errorMsg) {
-    return <ErrorMessage message={errorMsg} onRetry={fetchData} />
-  }
-
   return (
     <div>
       <div
@@ -119,13 +112,36 @@ export const ManagePackages = () => {
           </p>
         </div>
 
-        <button onClick={handleOpenCreate} className="btn btn-primary btn-sm">
-          <Plus size={16} />
-          Create Package
+        <button
+          id="admin-add-package-btn"
+          data-testid="add-package-btn"
+          onClick={handleOpenCreate}
+          className="btn btn-primary"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.65rem 1.35rem',
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            boxShadow: 'var(--shadow-sm)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          <Plus size={18} />
+          + Add New Package
         </button>
       </div>
 
-      {/* Search filter */}
+      {loading ? (
+        <LoadingSpinner message="Loading travel packages..." />
+      ) : errorMsg ? (
+        <ErrorMessage message={errorMsg} onRetry={fetchData} />
+      ) : (
+        <>
+          {/* Search filter */}
       <div className="card" style={{ padding: '0.75rem 1.25rem', marginBottom: '1.5rem' }}>
         <div style={{ position: 'relative' }}>
           <input
@@ -149,7 +165,7 @@ export const ManagePackages = () => {
           icon={Package}
           title="No Packages Found"
           description="No packages match your search, or no packages have been added yet."
-          actionText="Create First Package"
+          actionText="+ Add New Package"
           onAction={handleOpenCreate}
         />
       ) : (
@@ -218,6 +234,8 @@ export const ManagePackages = () => {
             </table>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* Create / Edit Modal */}

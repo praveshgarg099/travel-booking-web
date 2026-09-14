@@ -3,6 +3,7 @@ package org.telusco.travelbookingweb.service;
 import org.springframework.stereotype.Service;
 import org.telusco.travelbookingweb.dto.ReviewDTO;
 import org.telusco.travelbookingweb.entity.Review;
+import org.telusco.travelbookingweb.entity.Role;
 import org.telusco.travelbookingweb.entity.User;
 import org.telusco.travelbookingweb.entity.TravelPackage;
 import org.telusco.travelbookingweb.exception.*;
@@ -71,22 +72,10 @@ public class ReviewService {
 
         return reviewRepository.findAll()
                 .stream()
-                .map(review -> {
-
-                    ReviewDTO response = new ReviewDTO();
-
-                    response.setId(review.getId());
-                    response.setRating(review.getRating());
-                    response.setComment(review.getComment());
-                    response.setUserId(review.getUser().getId());
-                    response.setTravelPackageId(
-                            review.getTravelPackage().getId()
-                    );
-
-                    return response;
-                })
+                .map(this::mapToDto)
                 .toList();
     }
+
     public ReviewDTO getReviewById(Long id) {
 
         Review review = reviewRepository.findById(id)
@@ -95,25 +84,15 @@ public class ReviewService {
 
         User currentUser = authenticationService.getCurrentUser();
 
-        if (!review.getUser().getId()
-                .equals(currentUser.getId())) {
+        if (!review.getUser().getId().equals(currentUser.getId())
+                && currentUser.getRole() != Role.ADMIN) {
 
             throw new ForbiddenException(
                     "You are not allowed to view this review"
             );
         }
 
-        ReviewDTO response = new ReviewDTO();
-
-        response.setId(review.getId());
-        response.setRating(review.getRating());
-        response.setComment(review.getComment());
-        response.setUserId(review.getUser().getId());
-        response.setTravelPackageId(
-                review.getTravelPackage().getId()
-        );
-
-        return response;
+        return mapToDto(review);
     }
 
     public ReviewDTO updateReview(Long id, ReviewDTO reviewDTO) {
@@ -181,8 +160,8 @@ public class ReviewService {
 
         User currentUser = authenticationService.getCurrentUser();
 
-        if (!review.getUser().getId()
-                .equals(currentUser.getId())) {
+        if (!review.getUser().getId().equals(currentUser.getId())
+                && currentUser.getRole() != Role.ADMIN) {
 
             throw new ForbiddenException(
                     "You are not allowed to delete this review"
@@ -190,5 +169,21 @@ public class ReviewService {
         }
 
         reviewRepository.delete(review);
+    }
+
+    private ReviewDTO mapToDto(Review review) {
+        ReviewDTO dto = new ReviewDTO();
+        dto.setId(review.getId());
+        dto.setRating(review.getRating());
+        dto.setComment(review.getComment());
+        if (review.getUser() != null) {
+            dto.setUserId(review.getUser().getId());
+            dto.setCustomerName(review.getUser().getName());
+        }
+        if (review.getTravelPackage() != null) {
+            dto.setTravelPackageId(review.getTravelPackage().getId());
+            dto.setPackageTitle(review.getTravelPackage().getTitle());
+        }
+        return dto;
     }
 }

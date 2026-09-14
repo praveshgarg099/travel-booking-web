@@ -41,33 +41,31 @@ public class BookingService {
         if (bookingDto.getBookingDate().isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Booking date cannot be in the past");
         }
-        TravelPackage travelPackage = travelPackageRepository.findById(bookingDto.getTravelPackageId()).orElseThrow(()-> new TravelPackageNotFoundException("Travel Package not found"));
-        Double totalAmount = travelPackage.getPrice()*bookingDto.getNumberOfPeople();
-        if(travelPackage.getAvailableSeats()<bookingDto.getNumberOfPeople()){
+        TravelPackage travelPackage = travelPackageRepository.findByIdWithLock(bookingDto.getTravelPackageId())
+                .orElseThrow(() -> new TravelPackageNotFoundException("Travel Package not found"));
+
+        if (travelPackage.getAvailableSeats() < bookingDto.getNumberOfPeople()) {
             throw new InsufficientSeatsException("Not enough seats available");
         }
-        travelPackage.setAvailableSeats(travelPackage.getAvailableSeats()-bookingDto.getNumberOfPeople());
+
+        java.math.BigDecimal price = java.math.BigDecimal.valueOf(travelPackage.getPrice());
+        java.math.BigDecimal people = java.math.BigDecimal.valueOf(bookingDto.getNumberOfPeople());
+        java.math.BigDecimal total = price.multiply(people);
+        Double totalAmount = total.doubleValue();
+
+        travelPackage.setAvailableSeats(travelPackage.getAvailableSeats() - bookingDto.getNumberOfPeople());
         travelPackageRepository.save(travelPackage);
+
         Booking booking = new Booking();
         booking.setNumberOfPeople(bookingDto.getNumberOfPeople());
         booking.setBookingDate(bookingDto.getBookingDate());
-        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        booking.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(15));
         booking.setTotalAmount(totalAmount);
         booking.setUser(user);
         booking.setTravelPackage(travelPackage);
         Booking savedBooking = bookingRepository.save(booking);
-        BookingDto response = new BookingDto();
-
-        response.setId(savedBooking.getId());
-        response.setNumberOfPeople(savedBooking.getNumberOfPeople());
-        response.setBookingDate(savedBooking.getBookingDate());
-        response.setStatus(savedBooking.getStatus());
-        response.setTotalAmount(savedBooking.getTotalAmount());
-        //response.setUserId(savedBooking.getUser().getId());
-        response.setTravelPackageId(savedBooking.getTravelPackage().getId());
-        return response;
-
-
+        return mapToDto(savedBooking);
     }
 
     public List<BookingDto> getAllBookings() {
@@ -83,18 +81,10 @@ public class BookingService {
         }
 
         return bookings.stream()
-                .map(booking -> {
-                    BookingDto dto = new BookingDto();
-                    dto.setId(booking.getId());
-                    dto.setNumberOfPeople(booking.getNumberOfPeople());
-                    dto.setTotalAmount(booking.getTotalAmount());
-                    dto.setBookingDate(booking.getBookingDate());
-                    dto.setStatus(booking.getStatus());
-                    // dto.setUserId(booking.getUser().getId());
-                    dto.setTravelPackageId(booking.getTravelPackage().getId());
-                    return dto;
-                }).toList();
+                .map(this::mapToDto)
+                .toList();
     }
+
     public BookingDto getBookingById(Long id) {
 
         Booking booking = bookingRepository.findById(id)
@@ -103,27 +93,17 @@ public class BookingService {
 
         User currentUser = authenticationService.getCurrentUser();
 
-        if (!booking.getUser().getId()
-                .equals(currentUser.getId())) {
+        if (!booking.getUser().getId().equals(currentUser.getId())
+                && currentUser.getRole() != Role.ADMIN) {
 
             throw new ForbiddenException(
                     "You are not allowed to view this booking"
             );
         }
 
-        BookingDto response = new BookingDto();
-
-        response.setId(booking.getId());
-        response.setNumberOfPeople(booking.getNumberOfPeople());
-        response.setTotalAmount(booking.getTotalAmount());
-        response.setBookingDate(booking.getBookingDate());
-        response.setStatus(booking.getStatus());
-        response.setTravelPackageId(
-                booking.getTravelPackage().getId()
-        );
-
-        return response;
+        return mapToDto(booking);
     }
+
     @Transactional
     public BookingDto UpdateById(Long id, BookingDto bookingDto) {
 
@@ -133,9 +113,9 @@ public class BookingService {
 
         User currentUser = authenticationService.getCurrentUser();
 
-// Check ownership first
-        if (!existingBooking.getUser().getId()
-                .equals(currentUser.getId())) {
+        // Check ownership or ADMIN
+        if (!existingBooking.getUser().getId().equals(currentUser.getId())
+                && currentUser.getRole() != Role.ADMIN) {
 
             throw new ForbiddenException(
                     "You are not allowed to update this booking"
@@ -237,27 +217,9 @@ public class BookingService {
         bookingRepository.save(existingBooking);
 
         // 7. Create response
-        BookingDto response = new BookingDto();
-
-        response.setId(existingBooking.getId());
-        response.setNumberOfPeople(
-                existingBooking.getNumberOfPeople()
-        );
-        response.setTotalAmount(
-                existingBooking.getTotalAmount()
-        );
-        response.setBookingDate(
-                existingBooking.getBookingDate()
-        );
-        response.setStatus(
-                existingBooking.getStatus()
-        );
-        response.setTravelPackageId(
-                existingBooking.getTravelPackage().getId()
-        );
-
-        return response;
+        return mapToDto(existingBooking);
     }
+
     @Transactional
     public void DeleteBooking(Long id) {
 
@@ -267,28 +229,56 @@ public class BookingService {
 
         User currentUser = authenticationService.getCurrentUser();
 
-        if (!booking.getUser().getId().equals(currentUser.getId())) {
+        if (!booking.getUser().getId().equals(currentUser.getId())
+                && currentUser.getRole() != Role.ADMIN) {
             throw new ForbiddenException(
                     "You are not allowed to delete this booking"
             );
         }
 
-        TravelPackage travelPackage = booking.getTravelPackage();
+        boolean hasSuccessPayment = paymentRepository.existsByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS);
+        if (hasSuccessPayment) {
+            throw new InvalidPaymentStateException(
+                    "Cannot delete booking with a successful payment. Financial audit records must be preserved."
+            );
+        }
 
-        travelPackage.setAvailableSeats(
-                travelPackage.getAvailableSeats()
-                        + booking.getNumberOfPeople()
-        );
+        // Only restore seats if the booking was not already CANCELLED (prevents double seat release)
+        if (booking.getStatus() != BookingStatus.CANCELLED) {
+            TravelPackage travelPackage = booking.getTravelPackage();
+            if (travelPackage != null) {
+                travelPackage.setAvailableSeats(
+                        travelPackage.getAvailableSeats() + booking.getNumberOfPeople()
+                );
+                travelPackageRepository.save(travelPackage);
+            }
+        }
 
-        travelPackageRepository.save(travelPackage);
-        Payment payment = paymentRepository.findByBookingId(booking.getId());
-
-        if (payment != null) {
+        List<Payment> payments = paymentRepository.findAllByBookingId(booking.getId());
+        for (Payment payment : payments) {
             paymentRepository.delete(payment);
         }
 
         bookingRepository.deleteById(id);
     }
 
-
+    private BookingDto mapToDto(Booking booking) {
+        BookingDto dto = new BookingDto();
+        dto.setId(booking.getId());
+        dto.setNumberOfPeople(booking.getNumberOfPeople());
+        dto.setTotalAmount(booking.getTotalAmount());
+        dto.setBookingDate(booking.getBookingDate());
+        dto.setExpiresAt(booking.getExpiresAt());
+        dto.setStatus(booking.getStatus());
+        if (booking.getTravelPackage() != null) {
+            dto.setTravelPackageId(booking.getTravelPackage().getId());
+            dto.setPackageTitle(booking.getTravelPackage().getTitle());
+        }
+        if (booking.getUser() != null) {
+            dto.setUserId(booking.getUser().getId());
+            dto.setCustomerName(booking.getUser().getName());
+            dto.setCustomerEmail(booking.getUser().getEmail());
+        }
+        return dto;
+    }
 }

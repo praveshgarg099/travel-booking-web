@@ -52,6 +52,7 @@ public class UserService {
                     response.setId(user.getId());
                     response.setName(user.getName());
                     response.setEmail(user.getEmail());
+                    response.setRole(user.getRole() != null ? user.getRole().name() : null);
 
                     return response;
 
@@ -113,6 +114,7 @@ public class UserService {
         response.setId(user.getId());
         response.setName(user.getName());
         response.setEmail(user.getEmail());
+        response.setRole(user.getRole() != null ? user.getRole().name() : null);
 
         return response;
     }
@@ -159,6 +161,7 @@ public class UserService {
         response.setId(savedUser.getId());
         response.setName(savedUser.getName());
         response.setEmail(savedUser.getEmail());
+        response.setRole(savedUser.getRole() != null ? savedUser.getRole().name() : null);
 
         return response;
     }

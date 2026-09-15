@@ -1,8 +1,10 @@
 import axios from 'axios'
 
 // Base URL: in dev, defaults to '' which uses the Vite proxy (/api -> http://localhost:8080)
-// or uses VITE_API_BASE_URL if explicitly provided
-const baseURL = import.meta.env.VITE_API_BASE_URL || ''
+// In production, uses VITE_API_BASE_URL or VITE_API_URL pointing to the HTTPS backend
+const rawBaseURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || ''
+const baseURL = rawBaseURL.replace(/\/+$/, '')
+
 
 const api = axios.create({
   baseURL,

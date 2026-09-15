@@ -201,16 +201,17 @@ public class BookingService {
             travelPackageRepository.save(newPackage);
         }
 
-        // 5. Calculate new amount
-        double totalAmount =
-                newPackage.getPrice() * newNumberOfPeople;
+        // 5. Calculate new amount using BigDecimal for financial precision
+        java.math.BigDecimal price = java.math.BigDecimal.valueOf(newPackage.getPrice());
+        java.math.BigDecimal people = java.math.BigDecimal.valueOf(newNumberOfPeople);
+        double totalAmount = price.multiply(people).doubleValue();
 
-        // 6. Update booking
+        // 6. Update booking (status remains PENDING_PAYMENT / existing status - never auto-confirmed without payment)
         existingBooking.setNumberOfPeople(newNumberOfPeople);
         existingBooking.setBookingDate(
                 bookingDto.getBookingDate()
         );
-        existingBooking.setStatus(BookingStatus.CONFIRMED);
+        // Do NOT set status to CONFIRMED without payment!
         existingBooking.setTotalAmount(totalAmount);
         existingBooking.setTravelPackage(newPackage);
 
@@ -237,9 +238,9 @@ public class BookingService {
         }
 
         boolean hasSuccessPayment = paymentRepository.existsByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS);
-        if (hasSuccessPayment) {
+        if (hasSuccessPayment || booking.getStatus() == BookingStatus.CONFIRMED) {
             throw new InvalidPaymentStateException(
-                    "Cannot delete booking with a successful payment. Financial audit records must be preserved."
+                    "Cannot delete a confirmed or paid booking. Financial audit records must be preserved."
             );
         }
 

@@ -206,10 +206,33 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
                 marginBottom: '0.4rem',
               }}
             >
-              <span>
-                {formatCurrency(unitPrice)} × {numberOfPeople} guest{numberOfPeople > 1 ? 's' : ''}
-              </span>
-              <span>{formatCurrency(calculatedTotal)}</span>
+              <span>Price per traveler</span>
+              <span>{formatCurrency(unitPrice)}</span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.875rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '0.4rem',
+              }}
+            >
+              <span>Number of travelers</span>
+              <span>{numberOfPeople}</span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.875rem',
+                color: 'var(--slate-600)',
+                fontStyle: 'italic',
+                marginBottom: '0.5rem',
+              }}
+            >
+              <span>Calculation</span>
+              <span>{formatCurrency(unitPrice)} × {numberOfPeople} traveler{numberOfPeople > 1 ? 's' : ''}</span>
             </div>
             <div
               style={{
@@ -237,6 +260,9 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
                 {formatCurrency(calculatedTotal)}
               </span>
             </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', marginBottom: 0 }}>
+              * Calculated authoritatively by server upon reservation
+            </p>
           </div>
 
           {/* Submit Action */}

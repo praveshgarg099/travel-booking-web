@@ -41,10 +41,12 @@ api.interceptors.response.use(
         break
       case 401:
         userMessage = serverMessage || 'Please login to continue.'
-        // Clear local storage and notify auth state on token expiry/unauthorized
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        window.dispatchEvent(new Event('auth:logout'))
+        // Only clear storage and notify logout if user was actually logged in
+        if (localStorage.getItem('token')) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          window.dispatchEvent(new Event('auth:logout'))
+        }
         break
       case 403:
         userMessage = serverMessage || "You don't have permission to perform this action."

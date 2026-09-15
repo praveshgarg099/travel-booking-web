@@ -32,9 +32,28 @@ public class ReviewController {
     }
 
     @GetMapping
-    public List<ReviewDTO> getAllReviews() {
+    public List<ReviewDTO> getAllReviews(
+            @RequestParam(required = false) Long packageId,
+            @RequestParam(required = false) Boolean my) {
+        if (packageId != null) {
+            return reviewService.getReviewsByPackage(packageId);
+        }
+        if (Boolean.TRUE.equals(my)) {
+            return reviewService.getMyReviews();
+        }
         return reviewService.getAllReviews();
     }
+
+    @GetMapping("/package/{packageId}")
+    public List<ReviewDTO> getReviewsByPackage(@PathVariable Long packageId) {
+        return reviewService.getReviewsByPackage(packageId);
+    }
+
+    @GetMapping("/my")
+    public List<ReviewDTO> getMyReviews() {
+        return reviewService.getMyReviews();
+    }
+
     @GetMapping("/{id}")
     public ReviewDTO getReviewById(@PathVariable Long id) {
 

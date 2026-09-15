@@ -31,8 +31,11 @@ export const MyReviews = () => {
       setLoading(true)
       setErrorMsg('')
 
-      const [allReviews, pkgs] = await Promise.all([
-        reviewService.getAllReviews(),
+      const [userReviews, pkgs] = await Promise.all([
+        reviewService.getMyReviews().catch(async () => {
+          const all = await reviewService.getAllReviews()
+          return all.filter((r) => Number(r.userId) === Number(user.id))
+        }),
         packageService.getAllPackages(),
       ])
 
@@ -43,13 +46,7 @@ export const MyReviews = () => {
         })
       }
       setPackagesMap(map)
-
-      if (allReviews && user) {
-        const myRevs = allReviews.filter(
-          (r) => Number(r.userId) === Number(user.id)
-        )
-        setReviews(myRevs)
-      }
+      setReviews(userReviews || [])
     } catch (err) {
       console.error('Failed to load user reviews:', err)
       setErrorMsg(err.message || 'Could not fetch your reviews.')

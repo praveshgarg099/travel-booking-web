@@ -156,11 +156,16 @@ export const TravelPackageCard = ({ pkg, destinationName = '' }) => {
         >
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>
-              Starting from
+              Price per person
             </span>
-            <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
-              {formatCurrency(pkg.price)}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
+              <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
+                {formatCurrency(pkg.price)}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                per person
+              </span>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.45rem' }}>

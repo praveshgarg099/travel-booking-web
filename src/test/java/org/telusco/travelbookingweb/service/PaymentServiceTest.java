@@ -217,7 +217,9 @@ class PaymentServiceTest {
         com.razorpay.Payment rzpPayment = mock(com.razorpay.Payment.class);
         when(rzpPayment.get("status")).thenReturn("captured");
         when(rzpPayment.get("amount")).thenReturn(300000L); // Exactly 3000.0 * 100
+        when(rzpPayment.get("currency")).thenReturn("INR");
         when(rzpPayment.get("method")).thenReturn("upi");
+        when(razorpayConfig.getCurrency()).thenReturn("INR");
         when(razorpayService.fetchPayment("pay_123")).thenReturn(rzpPayment);
 
         RazorpayVerificationRequestDto request = new RazorpayVerificationRequestDto(500L, "order_123", "pay_123", "valid_sig");

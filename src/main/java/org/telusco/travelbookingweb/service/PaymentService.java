@@ -217,6 +217,14 @@ public class PaymentService {
             throw new PaymentVerificationException("Payment amount mismatch. Expected " + expectedPaise + " paise but got " + rzpAmountPaise + " paise.");
         }
 
+        // Validate currency against configured INR
+        String rzpCurrency = rzpPayment.get("currency");
+        if (rzpCurrency != null && !razorpayConfig.getCurrency().equalsIgnoreCase(rzpCurrency)) {
+            log.error("Currency mismatch for payment {}: received {}, expected {}",
+                    request.getRazorpayPaymentId(), rzpCurrency, razorpayConfig.getCurrency());
+            throw new PaymentVerificationException("Payment currency mismatch. Expected " + razorpayConfig.getCurrency() + " but got " + rzpCurrency);
+        }
+
         // Step 5: Authoritative payment method extraction from Razorpay
         String rzpMethod = rzpPayment.get("method");
         PaymentMethod mappedMethod = mapRazorpayMethod(rzpMethod);
@@ -303,6 +311,12 @@ public class PaymentService {
 
             if (amountPaise != expectedPaise) {
                 log.error("Webhook: Amount mismatch for order {}: got {}, expected {}", orderId, amountPaise, expectedPaise);
+                return;
+            }
+
+            String rzpCurrency = paymentEntity.optString("currency");
+            if (rzpCurrency != null && !rzpCurrency.isEmpty() && !razorpayConfig.getCurrency().equalsIgnoreCase(rzpCurrency)) {
+                log.error("Webhook: Currency mismatch for order {}: got {}, expected {}", orderId, rzpCurrency, razorpayConfig.getCurrency());
                 return;
             }
 
@@ -425,6 +439,7 @@ public class PaymentService {
         dto.setRazorpayOrderId(payment.getRazorpayOrderId());
         dto.setRazorpayPaymentId(payment.getRazorpayPaymentId());
         dto.setBookingId(payment.getBooking().getId());
+        dto.setCurrency(razorpayConfig.getCurrency());
         return dto;
     }
 
@@ -432,6 +447,7 @@ public class PaymentService {
         AdminPaymentResponseDto dto = new AdminPaymentResponseDto();
         dto.setPaymentId(payment.getId());
         dto.setAmount(payment.getAmount());
+        dto.setCurrency(razorpayConfig.getCurrency());
         dto.setPaymentMethod(payment.getPaymentMethod());
         dto.setStatus(payment.getStatus());
         dto.setPaymentDate(payment.getPaymentDate());

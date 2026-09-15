@@ -53,15 +53,18 @@ export const PackageDetails = () => {
         }
       }
 
-      // Fetch all reviews and filter for this package
+      // Fetch reviews for this package directly from backend
       try {
-        const allReviews = await reviewService.getAllReviews()
-        const filteredReviews = allReviews.filter(
-          (r) => Number(r.travelPackageId) === Number(id)
-        )
-        setReviews(filteredReviews)
+        const pkgReviews = await reviewService.getReviewsByPackage(id)
+        setReviews(pkgReviews || [])
       } catch (e) {
-        console.warn('Could not fetch reviews:', e)
+        console.warn('Could not fetch package reviews directly, falling back:', e)
+        try {
+          const allReviews = await reviewService.getAllReviews()
+          setReviews(allReviews.filter((r) => Number(r.travelPackageId) === Number(id)))
+        } catch (err2) {
+          console.warn('Could not fetch reviews:', err2)
+        }
       }
     } catch (err) {
       console.error('Error fetching package details:', err)

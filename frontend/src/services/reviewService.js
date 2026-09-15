@@ -13,6 +13,18 @@ export const reviewService = {
     return response.data
   },
 
+  // Get reviews for a specific package
+  getReviewsByPackage: async (packageId) => {
+    const response = await api.get(`/api/reviews/package/${packageId}`)
+    return response.data
+  },
+
+  // Get current user's submitted reviews
+  getMyReviews: async () => {
+    const response = await api.get('/api/reviews/my')
+    return response.data
+  },
+
   // Create review
   createReview: async (reviewData) => {
     const response = await api.post('/api/reviews', reviewData)

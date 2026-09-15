@@ -22,7 +22,7 @@ import {
   Database,
   CreditCard,
   Star,
-  DollarSign
+  IndianRupee
 } from 'lucide-react'
 
 export const AdminDashboard = () => {
@@ -124,7 +124,7 @@ export const AdminDashboard = () => {
     {
       title: 'Completed Revenue',
       count: formatCurrency(stats.totalRevenue),
-      icon: DollarSign,
+      icon: IndianRupee,
       color: '#059669',
       bg: '#dcfce7',
       link: '/admin/payments',

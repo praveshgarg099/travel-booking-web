@@ -6,7 +6,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import EmptyState from '../../components/common/EmptyState'
 import PaymentDetailModal from '../../components/admin/PaymentDetailModal'
-import { CreditCard, Search, Filter, Eye, DollarSign, Activity, XCircle, CheckCircle } from 'lucide-react'
+import { CreditCard, Search, Filter, Eye, IndianRupee, Activity, XCircle, CheckCircle } from 'lucide-react'
 
 export const ManagePayments = () => {
   const [payments, setPayments] = useState([])
@@ -101,7 +101,7 @@ export const ManagePayments = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         <div className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ padding: '0.75rem', background: '#dcfce7', color: '#16a34a', borderRadius: '50%' }}>
-            <DollarSign size={24} />
+            <IndianRupee size={24} />
           </div>
           <div>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Total Revenue (Success)</p>

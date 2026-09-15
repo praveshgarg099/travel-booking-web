@@ -21,6 +21,9 @@ export const Packages = () => {
   // Filter & sorting states
   const [searchQuery, setSearchQuery] = useState(initialQuery)
   const [selectedDestination, setSelectedDestination] = useState('')
+  const [priceRange, setPriceRange] = useState(100000)
+  const [durationFilter, setDurationFilter] = useState('')
+  const [inStockOnly, setInStockOnly] = useState(false)
   const [sortBy, setSortBy] = useState('featured')
 
   const fetchPackages = async () => {
@@ -31,8 +34,14 @@ export const Packages = () => {
         packageService.getAllPackages(),
         destinationService.getAllDestinations(),
       ])
-      setPackages(pkgs)
-      setDestinations(dests)
+      setPackages(pkgs || [])
+      setDestinations(dests || [])
+
+      // Calculate max price from packages if available
+      if (pkgs && pkgs.length > 0) {
+        const max = Math.max(...pkgs.map((p) => p.price || 0), 100000)
+        setPriceRange(max)
+      }
     } catch (err) {
       console.error('Failed to load packages:', err)
       setErrorMsg(err.message || 'Could not fetch travel packages from the server.')
@@ -56,11 +65,11 @@ export const Packages = () => {
     return map
   }, [destinations])
 
-  // Filter and sort packages in memory based on real backend data
+  // Filter and sort packages based on real backend data
   const filteredPackages = useMemo(() => {
     return packages
       .filter((pkg) => {
-        // Keyword search (title & description)
+        // Keyword search (title, description, destination name)
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase()
           const matchTitle = pkg.title?.toLowerCase().includes(q)
@@ -75,6 +84,21 @@ export const Packages = () => {
           if (Number(pkg.destinationId) !== Number(selectedDestination)) return false
         }
 
+        // Price filter
+        if (pkg.price != null && pkg.price > priceRange) {
+          return false
+        }
+
+        // Duration filter
+        if (durationFilter === 'short' && (pkg.duration == null || pkg.duration > 4)) return false
+        if (durationFilter === 'medium' && (pkg.duration == null || pkg.duration < 5 || pkg.duration > 7)) return false
+        if (durationFilter === 'long' && (pkg.duration == null || pkg.duration < 8)) return false
+
+        // In Stock Only
+        if (inStockOnly && (pkg.availableSeats == null || pkg.availableSeats <= 0)) {
+          return false
+        }
+
         return true
       })
       .sort((a, b) => {
@@ -82,13 +106,18 @@ export const Packages = () => {
         if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0)
         if (sortBy === 'duration-asc') return (a.duration || 0) - (b.duration || 0)
         if (sortBy === 'duration-desc') return (b.duration || 0) - (a.duration || 0)
-        return 0 // default
+        if (sortBy === 'name-asc') return (a.title || '').localeCompare(b.title || '')
+        return 0 // default featured
       })
-  }, [packages, searchQuery, selectedDestination, sortBy, destinationMap])
+  }, [packages, searchQuery, selectedDestination, priceRange, durationFilter, inStockOnly, sortBy, destinationMap])
 
   const handleResetFilters = () => {
     setSearchQuery('')
     setSelectedDestination('')
+    const max = packages.length > 0 ? Math.max(...packages.map((p) => p.price || 0), 100000) : 100000
+    setPriceRange(max)
+    setDurationFilter('')
+    setInStockOnly(false)
     setSortBy('featured')
     setSearchParams({})
   }
@@ -107,11 +136,11 @@ export const Packages = () => {
               letterSpacing: '0.05em',
             }}
           >
-            All Tour Catalog
+            Worldwide Catalog
           </span>
           <h1 style={{ fontSize: '2.5rem', marginTop: '0.25rem' }}>Explore Travel Packages</h1>
           <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            Choose from our collection of handpicked worldwide adventures with live seat reservations.
+            Choose from our curated collection of verified adventures with live seat reservations.
           </p>
         </div>
 
@@ -122,9 +151,17 @@ export const Packages = () => {
           destinations={destinations}
           selectedDestination={selectedDestination}
           onDestinationChange={setSelectedDestination}
+          priceRange={priceRange}
+          onPriceRangeChange={setPriceRange}
+          maxPriceLimit={packages.length > 0 ? Math.max(...packages.map((p) => p.price || 0), 100000) : 100000}
+          durationFilter={durationFilter}
+          onDurationFilterChange={setDurationFilter}
+          inStockOnly={inStockOnly}
+          onInStockOnlyChange={setInStockOnly}
           sortBy={sortBy}
           onSortChange={setSortBy}
           onReset={handleResetFilters}
+          totalResults={filteredPackages.length}
         />
 
         {/* Content Area */}
@@ -140,14 +177,14 @@ export const Packages = () => {
           <EmptyState
             icon={Compass}
             title="No Travel Packages Found"
-            description="No packages match your active filters or search terms. Try clearing your search or selecting a different destination."
+            description="No itineraries match your active search terms or filters. Try adjusting your filters or search keywords."
             actionText="Reset All Filters"
             onAction={handleResetFilters}
           />
         ) : (
           <>
             <div style={{ marginBottom: '1.25rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              Showing <strong>{filteredPackages.length}</strong> package{filteredPackages.length > 1 ? 's' : ''}
+              Showing <strong>{filteredPackages.length}</strong> travel package{filteredPackages.length > 1 ? 's' : ''}
             </div>
             <div className="grid-3">
               {filteredPackages.map((pkg) => (

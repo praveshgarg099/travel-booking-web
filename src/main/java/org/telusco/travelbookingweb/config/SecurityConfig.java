@@ -87,11 +87,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
 
-                        // Travel Package - GET allowed for logged-in users
+                        // Travel Package - GET allowed publicly for browsing
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/travel-packages/**"
-                        ).authenticated()
+                        ).permitAll()
 
                         // Travel Package - ADMIN only
                         .requestMatchers(
@@ -108,27 +108,34 @@ public class SecurityConfig {
                                 HttpMethod.DELETE,
                                 "/api/travel-packages/**"
                         ).hasRole("ADMIN")
-                                // Destination - GET allowed for logged-in users
-                                .requestMatchers(
-                                        HttpMethod.GET,
-                                        "/api/destinations/**"
-                                ).authenticated()
 
-// Destination - ADMIN only
-                                .requestMatchers(
-                                        HttpMethod.POST,
-                                        "/api/destinations"
-                                ).hasRole("ADMIN")
+                        // Destination - GET allowed publicly
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/destinations/**"
+                        ).permitAll()
 
-                                .requestMatchers(
-                                        HttpMethod.PUT,
-                                        "/api/destinations/**"
-                                ).hasRole("ADMIN")
+                        // Destination - ADMIN only
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/destinations"
+                        ).hasRole("ADMIN")
 
-                                .requestMatchers(
-                                        HttpMethod.DELETE,
-                                        "/api/destinations/**"
-                                ).hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/destinations/**"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/destinations/**"
+                        ).hasRole("ADMIN")
+
+                        // Reviews - GET allowed publicly
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/reviews/**"
+                        ).permitAll()
 
                         // Everything else requires login
                         .anyRequest().authenticated()

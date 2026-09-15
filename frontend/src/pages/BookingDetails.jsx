@@ -10,7 +10,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import ConfirmationDialog from '../components/common/ConfirmationDialog'
 import Modal from '../components/common/Modal'
-import { ArrowLeft, Calendar, Users, CreditCard, Edit3, Trash2, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Calendar, Users, CreditCard, Edit3, Trash2, CheckCircle2, ShieldCheck, AlertCircle, Printer, Star } from 'lucide-react'
 
 export const BookingDetails = () => {
   const { id } = useParams()
@@ -229,17 +229,26 @@ export const BookingDetails = () => {
 
             <div>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                Number of Guests
+                Travelers
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, marginTop: '0.25rem' }}>
                 <Users size={18} color="var(--primary)" />
-                {booking.numberOfPeople} person(s)
+                {booking.numberOfPeople} person{booking.numberOfPeople > 1 ? 's' : ''}
               </div>
             </div>
 
             <div>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                Backend Total Calculation
+                Price per Traveler
+              </span>
+              <div style={{ fontWeight: 700, marginTop: '0.25rem', color: 'var(--slate-800)' }}>
+                {travelPackage ? formatCurrency(travelPackage.price) : '—'}
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
+                Authoritative Total (INR)
               </span>
               <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-dark)', marginTop: '0.25rem' }}>
                 {formatCurrency(booking.totalAmount)}
@@ -302,7 +311,7 @@ export const BookingDetails = () => {
               gap: '1rem',
             }}
           >
-            <div>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               {!isPaid && booking.status !== 'CANCELLED' && (
                 <button
                   onClick={() => setIsEditing(true)}
@@ -313,16 +322,46 @@ export const BookingDetails = () => {
                   Update Date & Seats
                 </button>
               )}
+
+              {isPaid && (
+                <>
+                  <button
+                    onClick={() => window.print()}
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <Printer size={16} />
+                    Print Confirmation
+                  </button>
+
+                  <Link
+                    to={`/packages/${booking.travelPackageId}`}
+                    className="btn btn-outline btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <Star size={16} color="#b45309" />
+                    Review Package
+                  </Link>
+                </>
+              )}
             </div>
 
-            <button
-              onClick={() => setIsCancelOpen(true)}
-              className="btn btn-danger btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <Trash2 size={16} />
-              Cancel Booking
-            </button>
+            {!isPaid && booking.status !== 'CANCELLED' && (
+              <button
+                onClick={() => setIsCancelOpen(true)}
+                className="btn btn-danger btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Trash2 size={16} />
+                Cancel Reservation
+              </button>
+            )}
+
+            {isPaid && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Reservation confirmed. For changes or refunds, please contact support.
+              </span>
+            )}
           </div>
         </div>
       </div>

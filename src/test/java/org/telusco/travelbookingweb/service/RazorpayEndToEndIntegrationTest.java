@@ -137,6 +137,7 @@ public class RazorpayEndToEndIntegrationTest {
         com.razorpay.Payment rzpMockPayment = mock(com.razorpay.Payment.class);
         when(rzpMockPayment.get("status")).thenReturn("captured");
         when(rzpMockPayment.get("amount")).thenReturn(4400000L);
+        when(rzpMockPayment.get("currency")).thenReturn("INR");
         when(rzpMockPayment.get("method")).thenReturn("card");
         when(razorpayService.fetchPayment(testPaymentId)).thenReturn(rzpMockPayment);
 

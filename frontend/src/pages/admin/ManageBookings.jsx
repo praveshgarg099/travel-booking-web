@@ -17,7 +17,7 @@ import {
   Eye,
   Trash2,
   Users,
-  DollarSign,
+  IndianRupee,
   CheckCircle,
   XCircle,
   Clock,
@@ -200,7 +200,7 @@ export const ManageBookings = () => {
 
         <div className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ padding: '0.75rem', background: '#fef3c7', color: '#d97706', borderRadius: '50%' }}>
-            <DollarSign size={22} />
+            <IndianRupee size={22} />
           </div>
           <div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>Booking Value</p>

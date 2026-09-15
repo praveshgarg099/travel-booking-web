@@ -17,14 +17,18 @@ import java.util.List;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
-
     private final TravelPackageRepository travelPackageRepository;
     private final AuthenticationService authenticationService;
+    private final org.telusco.travelbookingweb.repository.BookingRepository bookingRepository;
 
-    public ReviewService(ReviewRepository reviewRepository, TravelPackageRepository travelPackageRepository, AuthenticationService authenticationService) {
+    public ReviewService(ReviewRepository reviewRepository,
+                         TravelPackageRepository travelPackageRepository,
+                         AuthenticationService authenticationService,
+                         org.telusco.travelbookingweb.repository.BookingRepository bookingRepository) {
         this.reviewRepository = reviewRepository;
         this.travelPackageRepository = travelPackageRepository;
         this.authenticationService = authenticationService;
+        this.bookingRepository = bookingRepository;
     }
 
     public ReviewDTO createReview(ReviewDTO reviewDTO) {
@@ -37,12 +41,26 @@ public class ReviewService {
                 ).orElseThrow(() ->
                         new TravelPackageNotFoundException(
                                 "Travel Package not found"));
+
         if (reviewRepository.existsByUserIdAndTravelPackageId(
                 user.getId(),
                 travelPackage.getId())) {
 
             throw new ReviewAlreadyExistsException(
                     "You have already reviewed this travel package");
+        }
+
+        // Verified Traveler enforcement: Ensure user has a CONFIRMED booking for this package
+        boolean hasConfirmedBooking = bookingRepository.existsByUserIdAndTravelPackageIdAndStatus(
+                user.getId(),
+                travelPackage.getId(),
+                org.telusco.travelbookingweb.entity.BookingStatus.CONFIRMED
+        );
+
+        if (!hasConfirmedBooking && user.getRole() != Role.ADMIN) {
+            throw new ForbiddenException(
+                    "Only verified travelers with a confirmed booking can review this package"
+            );
         }
 
         Review review = new Review();
@@ -53,18 +71,7 @@ public class ReviewService {
         review.setTravelPackage(travelPackage);
 
         Review savedReview = reviewRepository.save(review);
-
-        ReviewDTO response = new ReviewDTO();
-
-        response.setId(savedReview.getId());
-        response.setRating(savedReview.getRating());
-        response.setComment(savedReview.getComment());
-        response.setUserId(savedReview.getUser().getId());
-        response.setTravelPackageId(
-                savedReview.getTravelPackage().getId()
-        );
-
-        return response;
+        return mapToDto(savedReview);
     }
 
 
@@ -139,19 +146,24 @@ public class ReviewService {
         review.setUser(currentUser);
 
         Review updatedReview = reviewRepository.save(review);
-
-        ReviewDTO response = new ReviewDTO();
-
-        response.setId(updatedReview.getId());
-        response.setRating(updatedReview.getRating());
-        response.setComment(updatedReview.getComment());
-        response.setUserId(updatedReview.getUser().getId());
-        response.setTravelPackageId(
-                updatedReview.getTravelPackage().getId()
-        );
-
-        return response;
+        return mapToDto(updatedReview);
     }
+
+    public List<ReviewDTO> getReviewsByPackage(Long packageId) {
+        return reviewRepository.findByTravelPackageId(packageId)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    public List<ReviewDTO> getMyReviews() {
+        User currentUser = authenticationService.getCurrentUser();
+        return reviewRepository.findByUserId(currentUser.getId())
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
     public void deleteReview(Long id) {
 
         Review review = reviewRepository.findById(id)

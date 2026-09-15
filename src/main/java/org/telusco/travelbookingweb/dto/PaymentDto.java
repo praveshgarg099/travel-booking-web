@@ -26,4 +26,6 @@ public class PaymentDto {
 
     @NotNull(message = "Booking ID is required")
     private Long bookingId;
+
+    private String currency = "INR";
 }

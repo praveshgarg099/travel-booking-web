@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { bookingService } from '../services/bookingService'
 import { packageService } from '../services/packageService'
@@ -10,7 +10,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import EmptyState from '../components/common/EmptyState'
 import ConfirmationDialog from '../components/common/ConfirmationDialog'
-import { Calendar, Trash2, CreditCard, ArrowRight, Compass, Eye } from 'lucide-react'
+import { Calendar, Trash2, CreditCard, Compass, Eye, Star, CheckCircle2, ShieldAlert } from 'lucide-react'
 
 export const MyBookings = () => {
   const toast = useToast()
@@ -19,6 +19,7 @@ export const MyBookings = () => {
   const [paidBookingIds, setPaidBookingIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
 
   const [deleteTargetId, setDeleteTargetId] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -64,8 +65,10 @@ export const MyBookings = () => {
     try {
       setDeleteLoading(true)
       await bookingService.deleteBooking(deleteTargetId)
-      toast.success(`Booking #${deleteTargetId} has been cancelled.`)
-      setBookings((prev) => prev.filter((b) => b.id !== deleteTargetId))
+      toast.success(`Booking #${deleteTargetId} has been cancelled and seats released.`)
+      setBookings((prev) =>
+        prev.map((b) => (b.id === deleteTargetId ? { ...b, status: 'CANCELLED' } : b))
+      )
       setDeleteTargetId(null)
     } catch (err) {
       console.error('Failed to cancel booking:', err)
@@ -74,6 +77,21 @@ export const MyBookings = () => {
       setDeleteLoading(false)
     }
   }
+
+  // Filtered bookings
+  const filteredBookings = useMemo(() => {
+    if (statusFilter === 'ALL') return bookings
+    if (statusFilter === 'CONFIRMED') {
+      return bookings.filter((b) => b.status === 'CONFIRMED' || paidBookingIds.has(Number(b.id)))
+    }
+    if (statusFilter === 'PENDING') {
+      return bookings.filter((b) => b.status === 'PENDING_PAYMENT' && !paidBookingIds.has(Number(b.id)))
+    }
+    if (statusFilter === 'CANCELLED') {
+      return bookings.filter((b) => b.status === 'CANCELLED')
+    }
+    return bookings
+  }, [bookings, statusFilter, paidBookingIds])
 
   if (loading) {
     return <LoadingSpinner message="Retrieving your bookings..." fullPage />
@@ -91,6 +109,7 @@ export const MyBookings = () => {
 
   return (
     <div>
+      {/* Header */}
       <div
         style={{
           display: 'flex',
@@ -113,19 +132,61 @@ export const MyBookings = () => {
         </Link>
       </div>
 
-      {bookings.length === 0 ? (
+      {/* Filter Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          marginBottom: '1.5rem',
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: '0.75rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <button
+          className={`btn btn-sm ${statusFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setStatusFilter('ALL')}
+        >
+          All ({bookings.length})
+        </button>
+        <button
+          className={`btn btn-sm ${statusFilter === 'CONFIRMED' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setStatusFilter('CONFIRMED')}
+        >
+          Confirmed ({bookings.filter((b) => b.status === 'CONFIRMED' || paidBookingIds.has(Number(b.id))).length})
+        </button>
+        <button
+          className={`btn btn-sm ${statusFilter === 'PENDING' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setStatusFilter('PENDING')}
+        >
+          Pending Payment ({bookings.filter((b) => b.status === 'PENDING_PAYMENT' && !paidBookingIds.has(Number(b.id))).length})
+        </button>
+        <button
+          className={`btn btn-sm ${statusFilter === 'CANCELLED' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setStatusFilter('CANCELLED')}
+        >
+          Cancelled ({bookings.filter((b) => b.status === 'CANCELLED').length})
+        </button>
+      </div>
+
+      {filteredBookings.length === 0 ? (
         <EmptyState
           icon={Calendar}
-          title="No Travel Bookings Yet"
-          description="You haven't made any package bookings yet. Discover our top destinations and reserve your journey!"
+          title={statusFilter === 'ALL' ? 'No Travel Bookings Yet' : `No ${statusFilter.toLowerCase()} bookings`}
+          description={
+            statusFilter === 'ALL'
+              ? "You haven't made any package bookings yet. Discover our top destinations and reserve your journey!"
+              : 'No reservations currently match this filter tab.'
+          }
           actionText="Explore Packages"
           actionLink="/packages"
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {bookings.map((b) => {
+          {filteredBookings.map((b) => {
             const pkg = packagesMap[b.travelPackageId]
             const isPaid = paidBookingIds.has(Number(b.id)) || b.status === 'CONFIRMED'
+            const isPending = b.status === 'PENDING_PAYMENT' && !isPaid
 
             return (
               <div
@@ -141,16 +202,20 @@ export const MyBookings = () => {
                 }}
               >
                 {/* Left info */}
-                <div style={{ flex: '1 1 300px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+                <div style={{ flex: '1 1 320px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 800, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                       Booking #{b.id}
                     </span>
                     <BookingStatusBadge status={b.status} />
                     {isPaid ? (
-                      <span className="badge badge-success">Payment Received</span>
+                      <span className="badge badge-success">
+                        <CheckCircle2 size={12} /> Payment Verified
+                      </span>
+                    ) : b.status === 'CANCELLED' ? (
+                      <span className="badge badge-neutral">Cancelled</span>
                     ) : (
-                      <span className="badge badge-warning">Unpaid</span>
+                      <span className="badge badge-warning">Awaiting Payment</span>
                     )}
                   </div>
 
@@ -168,10 +233,10 @@ export const MyBookings = () => {
                     }}
                   >
                     <span>
-                      <strong>Date:</strong> {formatDate(b.bookingDate)}
+                      <strong>Travel Date:</strong> {formatDate(b.bookingDate)}
                     </span>
                     <span>
-                      <strong>Guests:</strong> {b.numberOfPeople} person{b.numberOfPeople > 1 ? 's' : ''}
+                      <strong>Guests:</strong> {b.numberOfPeople} traveler{b.numberOfPeople > 1 ? 's' : ''}
                     </span>
                     {pkg?.duration && (
                       <span>
@@ -192,35 +257,44 @@ export const MyBookings = () => {
                 >
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
-                      Total Amount
+                      Authoritative Total
                     </span>
                     <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
                       {formatCurrency(b.totalAmount)}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <Link to={`/bookings/${b.id}`} className="btn btn-secondary btn-sm" title="View details & edit">
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Link to={`/bookings/${b.id}`} className="btn btn-secondary btn-sm" title="View details & receipt">
                       <Eye size={15} />
                       Details
                     </Link>
 
-                    {b.status === 'PENDING_PAYMENT' && !isPaid && (
+                    {isPending && (
                       <Link to={`/checkout/${b.id}`} className="btn btn-primary btn-sm">
                         <CreditCard size={15} />
                         Pay Now
                       </Link>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTargetId(b.id)}
-                      className="btn btn-danger btn-sm"
-                      title="Cancel booking"
-                    >
-                      <Trash2 size={15} />
-                      Cancel
-                    </button>
+                    {isPaid && (
+                      <Link to={`/packages/${b.travelPackageId}`} className="btn btn-outline btn-sm" title="Share your experience">
+                        <Star size={14} color="#b45309" />
+                        Review
+                      </Link>
+                    )}
+
+                    {isPending && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTargetId(b.id)}
+                        className="btn btn-danger btn-sm"
+                        title="Cancel reservation"
+                      >
+                        <Trash2 size={15} />
+                        Cancel
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -234,8 +308,8 @@ export const MyBookings = () => {
         isOpen={Boolean(deleteTargetId)}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={handleConfirmCancel}
-        title="Cancel Travel Booking"
-        message={`Are you sure you want to cancel booking #${deleteTargetId}? Your reserved seats will be returned to the travel package.`}
+        title="Cancel Unpaid Reservation"
+        message={`Are you sure you want to cancel booking #${deleteTargetId}? Your reserved seats will immediately be returned to the travel package seat pool.`}
         confirmText="Yes, Cancel Booking"
         confirmVariant="danger"
         loading={deleteLoading}

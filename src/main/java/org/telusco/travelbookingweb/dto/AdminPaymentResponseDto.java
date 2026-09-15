@@ -31,4 +31,5 @@ public class AdminPaymentResponseDto {
     private Long travelPackageId;
     private String travelPackageName;
     private String destinationName;
+    private String currency = "INR";
 }

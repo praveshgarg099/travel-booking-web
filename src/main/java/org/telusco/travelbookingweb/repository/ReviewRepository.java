@@ -20,4 +20,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     );
 
     boolean existsByTravelPackageId(Long travelPackageId);
+
+    java.util.List<Review> findByTravelPackageId(Long travelPackageId);
+
+    java.util.List<Review> findByUserId(Long userId);
 }

@@ -48,7 +48,7 @@ export const Footer = () => {
                 <Compass size={22} color="var(--white)" />
               </div>
               <span>
-                Wander<span style={{ color: 'var(--primary-light)' }}>lust</span>
+                Yatra<span style={{ color: 'var(--primary-light)' }}>migo</span>
               </span>
             </div>
             <p style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--slate-400)', marginBottom: '1.25rem' }}>
@@ -129,7 +129,7 @@ export const Footer = () => {
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
               <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Mail size={16} color="var(--primary)" /> support@wanderlust.travel
+                <Mail size={16} color="var(--primary)" /> support@yatramigo.com
               </p>
               <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Phone size={16} color="var(--primary)" /> +1 (800) 555-TRAVEL
@@ -155,7 +155,7 @@ export const Footer = () => {
             color: 'var(--slate-500)',
           }}
         >
-          <p>© {new Date().getFullYear()} Wanderlust Travel Bookings. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Yatramigo Travel Bookings. All rights reserved.</p>
           <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             Crafted with <Heart size={14} color="var(--rose)" fill="var(--rose)" /> for travelers worldwide.
           </p>

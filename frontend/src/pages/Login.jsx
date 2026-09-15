@@ -82,7 +82,7 @@ export const Login = () => {
           >
             <Compass size={26} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Sign In to Wanderlust</h1>
+          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Sign In to Yatramigo</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
             Access your travel bookings, receipts, and reviews.
           </p>

@@ -69,7 +69,7 @@ export const Navbar = () => {
             <Compass size={22} />
           </div>
           <span>
-            Wander<span style={{ color: 'var(--primary)' }}>lust</span>
+            Yatra<span style={{ color: 'var(--primary)' }}>migo</span>
           </span>
         </Link>
 

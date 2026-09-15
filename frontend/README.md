@@ -1,4 +1,4 @@
-# Wanderlust - Travel Booking Web Application (Frontend)
+# Yatramigo - Travel Booking Web Application (Frontend)
 
 Modern, high-performance React + Vite frontend for the existing Spring Boot + Spring Security + JWT + JPA + MySQL backend.
 

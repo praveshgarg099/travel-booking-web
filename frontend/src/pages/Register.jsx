@@ -104,7 +104,7 @@ export const Register = () => {
           >
             <Compass size={26} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Join Wanderlust</h1>
+          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Join Yatramigo</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
             Create an account to book tours, manage reservations, and leave verified reviews.
           </p>

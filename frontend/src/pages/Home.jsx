@@ -285,7 +285,7 @@ export const Home = () => {
                 letterSpacing: '0.05em',
               }}
             >
-              The Wanderlust Guarantee
+              The Yatramigo Guarantee
             </span>
             <h2 style={{ fontSize: '2.25rem', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
               Why Book Your Journey With Us?

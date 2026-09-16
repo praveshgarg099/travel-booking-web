@@ -17,6 +17,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class PaymentService {
@@ -429,6 +430,73 @@ public class PaymentService {
         return mapToAdminPaymentResponseDto(payment);
     }
 
+    @Transactional
+    public RefundResponseDto processRefund(Long paymentId, RefundRequestDto request) {
+        User currentUser = authenticationService.getCurrentUser();
+        if (currentUser.getRole() != Role.ADMIN) {
+            throw new ForbiddenException("Only administrators are authorized to process refunds");
+        }
+
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found"));
+
+        if (payment.getStatus() != PaymentStatus.SUCCESS && payment.getStatus() != PaymentStatus.PARTIALLY_REFUNDED) {
+            throw new InvalidPaymentStateException("Only successful payments can be refunded. Current status: " + payment.getStatus());
+        }
+
+        double requestedAmount = (request != null && request.getAmount() != null && request.getAmount() > 0)
+                ? request.getAmount()
+                : payment.getAmount();
+
+        double alreadyRefunded = payment.getRefundAmount() != null ? payment.getRefundAmount() : 0.0;
+        double remainingRefundable = payment.getAmount() - alreadyRefunded;
+
+        if (requestedAmount > remainingRefundable) {
+            throw new InvalidPaymentStateException(
+                    String.format("Refund amount (₹%.2f) exceeds remaining refundable balance (₹%.2f)", requestedAmount, remainingRefundable)
+            );
+        }
+
+        String reason = (request != null && request.getReason() != null && !request.getReason().isBlank())
+                ? request.getReason().trim()
+                : "Administrative cancellation refund";
+        String refundId;
+
+        if (payment.getRazorpayPaymentId() != null && !payment.getRazorpayPaymentId().isBlank() && razorpayConfig.isConfigured()) {
+            long amountPaise = Math.round(requestedAmount * 100);
+            refundId = razorpayService.issueRefund(payment.getRazorpayPaymentId(), amountPaise, reason);
+        } else {
+            refundId = "rfnd_manual_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
+        }
+
+        double newTotalRefunded = alreadyRefunded + requestedAmount;
+        PaymentStatus newStatus = (newTotalRefunded >= payment.getAmount()) ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED;
+
+        payment.setStatus(newStatus);
+        payment.setRefundId(refundId);
+        payment.setRefundAmount(newTotalRefunded);
+        payment.setRefundDate(LocalDateTime.now());
+        payment.setRefundReason(reason);
+        payment.setRefundStatus("processed");
+        payment.setUpdatedAt(LocalDateTime.now());
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        log.info("Successfully processed refund {} of ₹{} for payment {} (booking {})",
+                refundId, requestedAmount, paymentId, payment.getBooking().getId());
+
+        return RefundResponseDto.builder()
+                .paymentId(savedPayment.getId())
+                .bookingId(savedPayment.getBooking().getId())
+                .refundId(refundId)
+                .refundAmount(newTotalRefunded)
+                .status(newStatus)
+                .refundDate(savedPayment.getRefundDate())
+                .reason(reason)
+                .message("Refund of ₹" + requestedAmount + " processed successfully.")
+                .build();
+    }
+
     private PaymentDto mapToPaymentDto(Payment payment) {
         PaymentDto dto = new PaymentDto();
         dto.setId(payment.getId());
@@ -440,6 +508,10 @@ public class PaymentService {
         dto.setRazorpayPaymentId(payment.getRazorpayPaymentId());
         dto.setBookingId(payment.getBooking().getId());
         dto.setCurrency(razorpayConfig.getCurrency());
+        dto.setRefundId(payment.getRefundId());
+        dto.setRefundAmount(payment.getRefundAmount());
+        dto.setRefundDate(payment.getRefundDate());
+        dto.setRefundReason(payment.getRefundReason());
         return dto;
     }
 
@@ -473,6 +545,11 @@ public class PaymentService {
                 dto.setDestinationName(travelPackage.getDestination().getName());
             }
         }
+
+        dto.setRefundId(payment.getRefundId());
+        dto.setRefundAmount(payment.getRefundAmount());
+        dto.setRefundDate(payment.getRefundDate());
+        dto.setRefundReason(payment.getRefundReason());
 
         return dto;
     }

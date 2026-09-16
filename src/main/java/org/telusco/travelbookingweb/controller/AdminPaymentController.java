@@ -27,4 +27,11 @@ public class AdminPaymentController {
     public AdminPaymentResponseDto getPaymentByIdForAdmin(@PathVariable Long id) {
         return paymentService.getPaymentByIdForAdmin(id);
     }
+
+    @PostMapping("/{id}/refund")
+    public org.springframework.http.ResponseEntity<org.telusco.travelbookingweb.dto.RefundResponseDto> refundPayment(
+            @PathVariable Long id,
+            @jakarta.validation.Valid @RequestBody(required = false) org.telusco.travelbookingweb.dto.RefundRequestDto request) {
+        return org.springframework.http.ResponseEntity.ok(paymentService.processRefund(id, request));
+    }
 }

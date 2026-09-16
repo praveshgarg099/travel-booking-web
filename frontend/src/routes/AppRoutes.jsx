@@ -12,6 +12,7 @@ import Packages from '../pages/Packages'
 import PackageDetails from '../pages/PackageDetails'
 import Login from '../pages/Login'
 import Register from '../pages/Register'
+import VerifyEmail from '../pages/VerifyEmail'
 
 // Authenticated Pages
 import Dashboard from '../pages/Dashboard'
@@ -70,6 +71,7 @@ export const AppRoutes = () => {
         <Route path="/packages/:id" element={<PackageDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Authenticated Checkout page */}
         <Route

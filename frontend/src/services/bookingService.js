@@ -25,10 +25,33 @@ export const bookingService = {
     return response.data
   },
 
-  // Delete / cancel booking
+  // Cancel / void booking (administrative or user cancellation preserving audit records)
+  cancelBooking: async (id) => {
+    const response = await api.patch(`/api/bookings/${id}/cancel`)
+    return response.data
+  },
+
+  // Delete booking (physical permanent deletion for unfinalized bookings)
   deleteBooking: async (id) => {
     const response = await api.delete(`/api/bookings/${id}`)
     return response.data
+  },
+
+  // Download official PDF booking voucher and invoice
+  downloadVoucher: async (id) => {
+    const response = await api.get(`/api/bookings/${id}/voucher`, {
+      responseType: 'blob',
+    })
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `Yatramigo-Voucher-BKG${id}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    return true
   },
 }
 

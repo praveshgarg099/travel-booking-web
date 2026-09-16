@@ -1,0 +1,183 @@
+package org.telusco.travelbookingweb.service;
+
+import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+
+@Service
+public class EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
+    private final JavaMailSender mailSender;
+    private final Environment environment;
+
+    @Value("${mail.from.address:no-reply@yatramigo.dev}")
+    private String fromAddress;
+
+    @Value("${mail.from.name:Yatramigo}")
+    private String fromName;
+
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${app.email.dev-otp-logging:false}")
+    private boolean devOtpLogging;
+
+    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider, Environment environment) {
+        this.mailSender = mailSenderProvider.getIfAvailable();
+        this.environment = environment;
+    }
+
+    public boolean isProductionEnvironment() {
+        return environment != null && environment.acceptsProfiles(Profiles.of("prod", "production"));
+    }
+
+    public boolean isMailConfigured() {
+        return mailSender != null && mailUsername != null && !mailUsername.trim().isEmpty();
+    }
+
+    public void sendVerificationOtp(String toEmail, String userName, String otpCode) {
+        log.info("Dispatching email verification OTP request for recipient: {}", toEmail);
+
+        if (!isMailConfigured()) {
+            if (isProductionEnvironment()) {
+                log.error("CRITICAL: SMTP mail credentials are not configured in production. Cannot send verification email to {}", toEmail);
+                throw new IllegalStateException("Email service is unconfigured. Cannot deliver verification code.");
+            }
+
+            if (devOtpLogging) {
+                log.warn("================================================================================");
+                log.warn(" [DEV MODE / SMTP UNCONFIGURED]");
+                log.warn(" Email Verification Code for {}: >>> {} <<< (Valid for 15 minutes)", toEmail, otpCode);
+                log.warn(" Configure SPRING_MAIL_USERNAME & SPRING_MAIL_PASSWORD to send real SMTP emails.");
+                log.warn("================================================================================");
+            } else {
+                log.info("Email service simulated in development without console OTP logging for {}", toEmail);
+            }
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(toEmail);
+            helper.setSubject("Your Yatramigo Email Verification Code: " + otpCode);
+
+            String htmlContent = buildOtpHtml(userName, otpCode);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            log.info("Successfully sent verification OTP email to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {}: {}", toEmail, e.getMessage());
+            if (isProductionEnvironment()) {
+                throw new RuntimeException("Failed to dispatch verification email. Please try again later.");
+            }
+        }
+    }
+
+    public void sendWelcomeEmail(String toEmail, String userName) {
+        if (!isMailConfigured()) {
+            log.info("[DEV MODE] Welcome email simulated for {}", toEmail);
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(toEmail);
+            helper.setSubject("Welcome to Yatramigo - Your Journey Begins!");
+
+            String html = """
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #f8fafc; border-radius: 8px;">
+                      <h2 style="color: #1e3a8a; margin-top: 0;">Welcome to Yatramigo, %s!</h2>
+                      <p style="color: #334155; font-size: 15px; line-height: 1.5;">Your account is now fully verified. You can explore curated tour packages, book dream destinations, and download travel vouchers anytime.</p>
+                      <p style="color: #64748b; font-size: 13px;">Happy travels,<br>The Yatramigo Team</p>
+                    </div>
+                    """.formatted(userName != null ? userName : "Traveler");
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.warn("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    private String buildOtpHtml(String userName, String otpCode) {
+        return """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <title>Verify Your Email</title>
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                  <table width="100%%" border="0" cellspacing="0" cellpadding="0" style="padding: 40px 20px;">
+                    <tr>
+                      <td align="center">
+                        <table width="100%%" max-width="560px" style="max-width: 560px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                          <!-- Header -->
+                          <tr>
+                            <td style="background-color: #1e3a8a; padding: 28px 36px; text-align: center;">
+                              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">YATRAMIGO</h1>
+                              <p style="color: #93c5fd; margin: 6px 0 0 0; font-size: 13px;">Travel Booking & Tours</p>
+                            </td>
+                          </tr>
+                          <!-- Body -->
+                          <tr>
+                            <td style="padding: 36px;">
+                              <h2 style="color: #0f172a; margin-top: 0; font-size: 20px; font-weight: 600;">Verify Your Email Address</h2>
+                              <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+                                Hello %s,<br>
+                                Thank you for creating an account with Yatramigo. To complete your registration and secure your account, please enter the 6-digit verification code below:
+                              </p>
+                              <!-- OTP Box -->
+                              <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 28px 0;">
+                                <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1e3a8a;">%s</span>
+                              </div>
+                              <p style="color: #64748b; font-size: 13px; margin: 0; text-align: center;">
+                                ⏱️ This code will expire in <strong>15 minutes</strong>.
+                              </p>
+                              <div style="border-top: 1px solid #e2e8f0; margin-top: 32px; padding-top: 20px;">
+                                <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin: 0;">
+                                  If you did not attempt to sign up for Yatramigo, please ignore this email. Your email address remains safe.
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                          <!-- Footer -->
+                          <tr>
+                            <td style="background-color: #f8fafc; padding: 20px 36px; text-align: center; border-top: 1px solid #f1f5f9;">
+                              <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                                &copy; %d Yatramigo Travel Technologies Pvt. Ltd. All rights reserved.
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </body>
+                </html>
+                """.formatted(
+                userName != null && !userName.isBlank() ? userName : "Traveler",
+                otpCode,
+                java.time.Year.now().getValue()
+        );
+    }
+}

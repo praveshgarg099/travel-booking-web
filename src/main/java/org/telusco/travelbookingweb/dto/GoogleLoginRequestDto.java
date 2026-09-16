@@ -1,5 +1,6 @@
 package org.telusco.travelbookingweb.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,7 +10,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginRequestDTO {
-    private String email;
-    private String password;
+public class GoogleLoginRequestDto {
+
+    @NotBlank(message = "Google ID token is required")
+    private String idToken;
 }

@@ -40,10 +40,8 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('auth:logout', handleForceLogout)
   }, [])
 
-  const login = async (credentials) => {
-    // credentials: { email, password }
-    const data = await authService.login(credentials)
-    // Response: { id, name, email, token }
+  const handleAuthSuccess = (data) => {
+    // Response: { id, name, email, token, ... }
     const { token: jwtToken, ...userData } = data
 
     // Extract role from JWT claims
@@ -65,6 +63,23 @@ export const AuthProvider = ({ children }) => {
     setUser(fullUser)
 
     return fullUser
+  }
+
+  const login = async (credentials) => {
+    // credentials: { email, password }
+    const data = await authService.login(credentials)
+    return handleAuthSuccess(data)
+  }
+
+  const loginWithGoogle = async (idToken) => {
+    const data = await authService.googleLogin(idToken)
+    return handleAuthSuccess(data)
+  }
+
+  const completeVerification = async (verifyData) => {
+    // verifyData: { email, code }
+    const data = await authService.verifyEmail(verifyData)
+    return handleAuthSuccess(data)
   }
 
   const logout = useCallback(() => {
@@ -92,6 +107,8 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         isAdmin,
         login,
+        loginWithGoogle,
+        completeVerification,
         logout,
         updateProfile,
       }}

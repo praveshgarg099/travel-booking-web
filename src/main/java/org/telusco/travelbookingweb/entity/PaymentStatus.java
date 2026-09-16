@@ -3,5 +3,7 @@ package org.telusco.travelbookingweb.entity;
 public enum PaymentStatus {
     SUCCESS,
     FAILED,
-    PENDING
+    PENDING,
+    REFUNDED,
+    PARTIALLY_REFUNDED
 }

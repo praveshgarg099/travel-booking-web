@@ -35,6 +35,21 @@ public class Payment {
     @Column(name = "razorpay_signature")
     private String razorpaySignature;
 
+    @Column(name = "refund_id")
+    private String refundId;
+
+    @Column(name = "refund_amount")
+    private Double refundAmount;
+
+    @Column(name = "refund_date")
+    private LocalDateTime refundDate;
+
+    @Column(name = "refund_reason")
+    private String refundReason;
+
+    @Column(name = "refund_status")
+    private String refundStatus;
+
     @ManyToOne
     @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;

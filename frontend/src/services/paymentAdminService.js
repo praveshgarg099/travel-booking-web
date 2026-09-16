@@ -9,5 +9,10 @@ export const paymentAdminService = {
   getPaymentById: async (id) => {
     const response = await api.get(`/api/admin/payments/${id}`)
     return response.data
+  },
+
+  issueRefund: async (id, payload) => {
+    const response = await api.post(`/api/admin/payments/${id}/refund`, payload)
+    return response.data
   }
 }

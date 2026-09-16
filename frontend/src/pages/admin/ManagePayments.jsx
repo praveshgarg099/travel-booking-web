@@ -6,7 +6,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import EmptyState from '../../components/common/EmptyState'
 import PaymentDetailModal from '../../components/admin/PaymentDetailModal'
-import { CreditCard, Search, Filter, Eye, IndianRupee, Activity, XCircle, CheckCircle } from 'lucide-react'
+import { CreditCard, Search, Filter, Eye, IndianRupee, Activity, XCircle, CheckCircle, RotateCcw } from 'lucide-react'
 
 export const ManagePayments = () => {
   const [payments, setPayments] = useState([])
@@ -41,7 +41,7 @@ export const ManagePayments = () => {
 
   // Calculate Revenue Dashboard Metrics
   const metrics = useMemo(() => {
-    const defaultMetrics = { totalRevenue: 0, totalCount: 0, successCount: 0, failedCount: 0, pendingCount: 0 }
+    const defaultMetrics = { totalRevenue: 0, totalCount: 0, successCount: 0, failedCount: 0, pendingCount: 0, refundedCount: 0, refundedAmount: 0 }
     if (!payments || payments.length === 0) return defaultMetrics
 
     return payments.reduce((acc, curr) => {
@@ -53,6 +53,9 @@ export const ManagePayments = () => {
         acc.failedCount += 1
       } else if (curr.status === 'PENDING') {
         acc.pendingCount += 1
+      } else if (curr.status === 'REFUNDED' || curr.status === 'PARTIALLY_REFUNDED') {
+        acc.refundedCount += 1
+        acc.refundedAmount += curr.refundAmount || curr.amount || 0
       }
       return acc
     }, defaultMetrics)
@@ -67,7 +70,7 @@ export const ManagePayments = () => {
       // 2. Method Filter
       if (methodFilter !== 'ALL' && p.paymentMethod !== methodFilter) return false
       
-      // 3. Search Term (Payment ID, Customer Name, Email, Booking ID, Package)
+      // 3. Search Term (Payment ID, Customer Name, Email, Booking ID, Package, Refund ID)
       if (searchTerm) {
         const lowerSearch = searchTerm.toLowerCase()
         const matchesName = p.customerName?.toLowerCase().includes(lowerSearch)
@@ -77,8 +80,9 @@ export const ManagePayments = () => {
         const matchesBookingId = p.bookingId?.toString().includes(lowerSearch)
         const matchesRzpPayId = p.razorpayPaymentId?.toLowerCase().includes(lowerSearch)
         const matchesRzpOrderId = p.razorpayOrderId?.toLowerCase().includes(lowerSearch)
+        const matchesRefundId = p.refundId?.toLowerCase().includes(lowerSearch)
         
-        if (!matchesName && !matchesEmail && !matchesPackage && !matchesId && !matchesBookingId && !matchesRzpPayId && !matchesRzpOrderId) {
+        if (!matchesName && !matchesEmail && !matchesPackage && !matchesId && !matchesBookingId && !matchesRzpPayId && !matchesRzpOrderId && !matchesRefundId) {
           return false
         }
       }
@@ -93,7 +97,7 @@ export const ManagePayments = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <CreditCard size={24} color="#3b82f6" /> Manage Payments
+          <CreditCard size={24} color="#3b82f6" /> Manage Payments & Refunds
         </h1>
       </div>
 
@@ -104,7 +108,7 @@ export const ManagePayments = () => {
             <IndianRupee size={24} />
           </div>
           <div>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Total Revenue (Success)</p>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Gross Revenue</p>
             <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1f2937' }}>{formatCurrency(metrics.totalRevenue)}</p>
           </div>
         </div>
@@ -115,6 +119,15 @@ export const ManagePayments = () => {
           <div>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Total Transactions</p>
             <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1f2937' }}>{metrics.totalCount}</p>
+          </div>
+        </div>
+        <div className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ padding: '0.75rem', background: '#faf5ff', color: '#7e22ce', borderRadius: '50%' }}>
+            <RotateCcw size={24} />
+          </div>
+          <div>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Total Refunded ({metrics.refundedCount})</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#7e22ce' }}>{formatCurrency(metrics.refundedAmount)}</p>
           </div>
         </div>
         <div className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -135,7 +148,7 @@ export const ManagePayments = () => {
             <Search size={18} color="#9ca3af" style={{ marginRight: '0.5rem' }} />
             <input
               type="text"
-              placeholder="Search by ID, Customer Name, Email, Booking ID, Package..."
+              placeholder="Search by ID, Customer Name, Email, Booking ID, Package, Refund ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.875rem' }}
@@ -152,6 +165,8 @@ export const ManagePayments = () => {
               >
                 <option value="ALL">All Statuses</option>
                 <option value="SUCCESS">Success</option>
+                <option value="REFUNDED">Refunded</option>
+                <option value="PARTIALLY_REFUNDED">Partially Refunded</option>
                 <option value="FAILED">Failed</option>
                 <option value="PENDING">Pending</option>
               </select>
@@ -195,47 +210,72 @@ export const ManagePayments = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredPayments.map((p) => (
-                  <tr key={p.paymentId} style={{ borderBottom: '1px solid #e5e7eb', transition: 'background-color 0.2s' }} className="table-row-hover">
-                    <td style={{ padding: '1rem', fontWeight: '500', color: '#1f2937' }}>
-                      <div>#{p.paymentId}</div>
-                      {p.razorpayPaymentId && (
-                        <div style={{ fontSize: '0.7rem', color: '#6b7280', fontFamily: 'monospace' }}>
-                          {p.razorpayPaymentId}
+                {filteredPayments.map((p) => {
+                  const isRefundable = (p.status === 'SUCCESS' || p.status === 'PARTIALLY_REFUNDED') && (p.amount > (p.refundAmount || 0))
+                  return (
+                    <tr key={p.paymentId} style={{ borderBottom: '1px solid #e5e7eb', transition: 'background-color 0.2s' }} className="table-row-hover">
+                      <td style={{ padding: '1rem', fontWeight: '500', color: '#1f2937' }}>
+                        <div>#{p.paymentId}</div>
+                        {p.razorpayPaymentId && (
+                          <div style={{ fontSize: '0.7rem', color: '#6b7280', fontFamily: 'monospace' }}>
+                            {p.razorpayPaymentId}
+                          </div>
+                        )}
+                        {p.refundId && (
+                          <div style={{ fontSize: '0.7rem', color: '#7e22ce', fontFamily: 'monospace', marginTop: '2px' }}>
+                            {p.refundId}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <p style={{ fontWeight: '500', color: '#1f2937', marginBottom: '2px' }}>{p.customerName}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>{p.customerEmail}</p>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <p style={{ fontSize: '0.875rem', color: '#1f2937', marginBottom: '2px' }}>{p.travelPackageName}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Booking #{p.bookingId}</p>
+                      </td>
+                      <td style={{ padding: '1rem', fontWeight: '600', color: p.status === 'REFUNDED' ? '#7e22ce' : '#059669' }}>
+                        {formatCurrency(p.amount)}
+                        {p.refundAmount > 0 && (
+                          <div style={{ fontSize: '0.75rem', color: '#7e22ce', fontWeight: 500 }}>
+                            Refunded: {formatCurrency(p.refundAmount)}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#4b5563' }}>
+                        {p.paymentMethod}
+                      </td>
+                      <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#4b5563' }}>
+                        {p.paymentDate ? formatDate(p.paymentDate) : '—'}
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <PaymentStatusBadge status={p.status} />
+                      </td>
+                      <td style={{ padding: '1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <button
+                            onClick={() => setSelectedPayment(p)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
+                            <Eye size={14} /> View
+                          </button>
+                          {isRefundable && (
+                            <button
+                              onClick={() => setSelectedPayment(p)}
+                              className="btn btn-warning btn-sm"
+                              title="Issue refund via Razorpay"
+                              style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                            >
+                              <RotateCcw size={14} /> Refund
+                            </button>
+                          )}
                         </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <p style={{ fontWeight: '500', color: '#1f2937', marginBottom: '2px' }}>{p.customerName}</p>
-                      <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>{p.customerEmail}</p>
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <p style={{ fontSize: '0.875rem', color: '#1f2937', marginBottom: '2px' }}>{p.travelPackageName}</p>
-                      <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Booking #{p.bookingId}</p>
-                    </td>
-                    <td style={{ padding: '1rem', fontWeight: '600', color: '#059669' }}>
-                      {formatCurrency(p.amount)}
-                    </td>
-                    <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#4b5563' }}>
-                      {p.paymentMethod}
-                    </td>
-                    <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#4b5563' }}>
-                      {p.paymentDate ? formatDate(p.paymentDate) : '—'}
-                    </td>
-                    <td style={{ padding: '1rem' }}>
-                      <PaymentStatusBadge status={p.status} />
-                    </td>
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      <button
-                        onClick={() => setSelectedPayment(p)}
-                        className="btn btn-outline"
-                        style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                      >
-                        <Eye size={14} /> View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -246,7 +286,10 @@ export const ManagePayments = () => {
         isOpen={!!selectedPayment}
         onClose={() => setSelectedPayment(null)}
         payment={selectedPayment}
+        onRefundSuccess={() => fetchAdminPayments()}
       />
     </div>
   )
 }
+
+export default ManagePayments

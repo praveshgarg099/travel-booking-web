@@ -9,15 +9,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.telusco.travelbookingweb.config.RazorpayConfig;
-import org.telusco.travelbookingweb.dto.RazorpayOrderRequestDto;
-import org.telusco.travelbookingweb.dto.RazorpayOrderResponseDto;
-import org.telusco.travelbookingweb.dto.RazorpayVerificationRequestDto;
-import org.telusco.travelbookingweb.dto.RazorpayVerificationResponseDto;
+import org.telusco.travelbookingweb.dto.*;
 import org.telusco.travelbookingweb.entity.*;
-import org.telusco.travelbookingweb.exception.BookingExpiredException;
-import org.telusco.travelbookingweb.exception.ForbiddenException;
-import org.telusco.travelbookingweb.exception.PaymentAlreadyExistsException;
-import org.telusco.travelbookingweb.exception.PaymentVerificationException;
+import org.telusco.travelbookingweb.exception.*;
 import org.telusco.travelbookingweb.repository.BookingRepository;
 import org.telusco.travelbookingweb.repository.PaymentRepository;
 
@@ -235,5 +229,130 @@ class PaymentServiceTest {
 
         verify(paymentRepository, times(1)).save(payment);
         verify(bookingRepository, times(1)).save(testBooking);
+    }
+
+    @Test
+    @DisplayName("Admin can process full refund on SUCCESS payment via Razorpay")
+    void testAdminCanProcessFullRefundSuccess() {
+        User adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setRole(Role.ADMIN);
+
+        Payment successPayment = new Payment();
+        successPayment.setId(99L);
+        successPayment.setAmount(3000.0);
+        successPayment.setStatus(PaymentStatus.SUCCESS);
+        successPayment.setRazorpayPaymentId("pay_rzp_full");
+        successPayment.setBooking(testBooking);
+
+        when(authenticationService.getCurrentUser()).thenReturn(adminUser);
+        when(paymentRepository.findById(99L)).thenReturn(Optional.of(successPayment));
+        when(razorpayConfig.isConfigured()).thenReturn(true);
+        when(razorpayService.issueRefund(eq("pay_rzp_full"), eq(300000L), anyString())).thenReturn("rfnd_12345");
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RefundRequestDto request = new RefundRequestDto();
+        request.setAmount(3000.0);
+        request.setReason("Customer requested trip cancellation");
+
+        RefundResponseDto response = paymentService.processRefund(99L, request);
+
+        assertNotNull(response);
+        assertEquals(PaymentStatus.REFUNDED, response.getStatus());
+        assertEquals("rfnd_12345", response.getRefundId());
+        assertEquals(3000.0, response.getRefundAmount());
+        assertEquals(PaymentStatus.REFUNDED, successPayment.getStatus());
+        verify(paymentRepository, times(1)).save(successPayment);
+    }
+
+    @Test
+    @DisplayName("Admin can process partial refund on SUCCESS payment")
+    void testAdminCanProcessPartialRefundSuccess() {
+        User adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setRole(Role.ADMIN);
+
+        Payment successPayment = new Payment();
+        successPayment.setId(99L);
+        successPayment.setAmount(3000.0);
+        successPayment.setStatus(PaymentStatus.SUCCESS);
+        successPayment.setRazorpayPaymentId("pay_rzp_part");
+        successPayment.setBooking(testBooking);
+
+        when(authenticationService.getCurrentUser()).thenReturn(adminUser);
+        when(paymentRepository.findById(99L)).thenReturn(Optional.of(successPayment));
+        when(razorpayConfig.isConfigured()).thenReturn(true);
+        when(razorpayService.issueRefund(eq("pay_rzp_part"), eq(100000L), anyString())).thenReturn("rfnd_part_99");
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RefundRequestDto request = new RefundRequestDto();
+        request.setAmount(1000.0);
+        request.setReason("Partial discount adjustment");
+
+        RefundResponseDto response = paymentService.processRefund(99L, request);
+
+        assertNotNull(response);
+        assertEquals(PaymentStatus.PARTIALLY_REFUNDED, response.getStatus());
+        assertEquals("rfnd_part_99", response.getRefundId());
+        assertEquals(1000.0, response.getRefundAmount());
+        assertEquals(PaymentStatus.PARTIALLY_REFUNDED, successPayment.getStatus());
+    }
+
+    @Test
+    @DisplayName("Non-admin user is rejected from issuing refunds")
+    void testNonAdminCannotIssueRefund() {
+        when(authenticationService.getCurrentUser()).thenReturn(testUser);
+
+        RefundRequestDto request = new RefundRequestDto();
+        request.setAmount(1000.0);
+
+        assertThrows(ForbiddenException.class, () -> paymentService.processRefund(99L, request));
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Cannot refund a payment that is not SUCCESS or PARTIALLY_REFUNDED")
+    void testCannotRefundPendingOrFailedPayment() {
+        User adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setRole(Role.ADMIN);
+
+        Payment pendingPayment = new Payment();
+        pendingPayment.setId(99L);
+        pendingPayment.setAmount(3000.0);
+        pendingPayment.setStatus(PaymentStatus.PENDING);
+        pendingPayment.setBooking(testBooking);
+
+        when(authenticationService.getCurrentUser()).thenReturn(adminUser);
+        when(paymentRepository.findById(99L)).thenReturn(Optional.of(pendingPayment));
+
+        assertThrows(InvalidPaymentStateException.class, () -> paymentService.processRefund(99L, new RefundRequestDto()));
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Refund amount exceeding payment balance is rejected")
+    void testRefundAmountExceedingBalanceIsRejected() {
+        User adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setRole(Role.ADMIN);
+
+        Payment successPayment = new Payment();
+        successPayment.setId(99L);
+        successPayment.setAmount(3000.0);
+        successPayment.setRefundAmount(2500.0); // Only 500 remaining
+        successPayment.setStatus(PaymentStatus.PARTIALLY_REFUNDED);
+        successPayment.setBooking(testBooking);
+
+        when(authenticationService.getCurrentUser()).thenReturn(adminUser);
+        when(paymentRepository.findById(99L)).thenReturn(Optional.of(successPayment));
+
+        RefundRequestDto request = new RefundRequestDto();
+        request.setAmount(600.0); // Exceeds 500.0
+
+        InvalidPaymentStateException ex = assertThrows(InvalidPaymentStateException.class,
+                () -> paymentService.processRefund(99L, request));
+        assertTrue(ex.getMessage().contains("exceeds remaining refundable balance"));
+        verify(paymentRepository, never()).save(any());
     }
 }

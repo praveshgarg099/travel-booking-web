@@ -222,6 +222,54 @@ public class BookingService {
     }
 
     @Transactional
+    public BookingDto cancelBooking(Long id) {
+        Booking booking = bookingRepository.findByIdWithLock(id)
+                .or(() -> bookingRepository.findById(id))
+                .orElseThrow(() -> new BookingNotFoundException("Booking not found"));
+
+        User currentUser = authenticationService.getCurrentUser();
+
+        boolean isOwner = booking.getUser() != null && booking.getUser().getId().equals(currentUser.getId());
+        if (!isOwner && currentUser.getRole() != Role.ADMIN) {
+            throw new ForbiddenException("You are not allowed to cancel this booking");
+        }
+
+        boolean hasSuccessPayment = paymentRepository.existsByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS);
+        if ((hasSuccessPayment || booking.getStatus() == BookingStatus.CONFIRMED) && currentUser.getRole() != Role.ADMIN) {
+            throw new ForbiddenException("Only administrators can cancel or void confirmed reservations");
+        }
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("Booking is already cancelled");
+        }
+
+        if (booking.getTravelPackage() != null) {
+            TravelPackage travelPackage = travelPackageRepository.findByIdWithLock(booking.getTravelPackage().getId())
+                    .or(() -> travelPackageRepository.findById(booking.getTravelPackage().getId()))
+                    .orElse(booking.getTravelPackage());
+
+            travelPackage.setAvailableSeats(
+                    travelPackage.getAvailableSeats() + booking.getNumberOfPeople()
+            );
+            travelPackageRepository.save(travelPackage);
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Booking updatedBooking = bookingRepository.save(booking);
+
+        List<Payment> payments = paymentRepository.findAllByBookingId(booking.getId());
+        for (Payment payment : payments) {
+            if (payment.getStatus() == PaymentStatus.PENDING) {
+                payment.setStatus(PaymentStatus.FAILED);
+                payment.setUpdatedAt(java.time.LocalDateTime.now());
+                paymentRepository.save(payment);
+            }
+        }
+
+        return mapToDto(updatedBooking);
+    }
+
+    @Transactional
     public void DeleteBooking(Long id) {
 
         Booking booking = bookingRepository.findById(id)
@@ -230,8 +278,8 @@ public class BookingService {
 
         User currentUser = authenticationService.getCurrentUser();
 
-        if (!booking.getUser().getId().equals(currentUser.getId())
-                && currentUser.getRole() != Role.ADMIN) {
+        boolean isOwner = booking.getUser() != null && booking.getUser().getId().equals(currentUser.getId());
+        if (!isOwner && currentUser.getRole() != Role.ADMIN) {
             throw new ForbiddenException(
                     "You are not allowed to delete this booking"
             );
@@ -240,7 +288,7 @@ public class BookingService {
         boolean hasSuccessPayment = paymentRepository.existsByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS);
         if (hasSuccessPayment || booking.getStatus() == BookingStatus.CONFIRMED) {
             throw new InvalidPaymentStateException(
-                    "Cannot delete a confirmed or paid booking. Financial audit records must be preserved."
+                    "Cannot permanently delete a confirmed or paid booking. Financial audit records must be preserved. Please cancel or void the booking instead."
             );
         }
 
@@ -256,8 +304,13 @@ public class BookingService {
         }
 
         List<Payment> payments = paymentRepository.findAllByBookingId(booking.getId());
-        for (Payment payment : payments) {
-            paymentRepository.delete(payment);
+        List<Payment> nonFinalizedPayments = payments.stream()
+                .filter(p -> p.getStatus() != PaymentStatus.SUCCESS)
+                .toList();
+
+        if (!nonFinalizedPayments.isEmpty()) {
+            paymentRepository.deleteAll(nonFinalizedPayments);
+            paymentRepository.flush();
         }
 
         bookingRepository.deleteById(id);

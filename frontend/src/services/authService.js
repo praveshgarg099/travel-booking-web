@@ -36,6 +36,24 @@ export const authService = {
     const response = await api.delete(`/api/users/${id}`)
     return response.data
   },
+
+  // Verify Email with OTP
+  verifyEmail: async (data) => {
+    const response = await api.post('/api/users/verify-email', data)
+    return response.data
+  },
+
+  // Resend OTP code
+  resendVerification: async (email) => {
+    const response = await api.post(`/api/users/resend-verification?email=${encodeURIComponent(email)}`)
+    return response.data
+  },
+
+  // Google OAuth Sign-In
+  googleLogin: async (idToken) => {
+    const response = await api.post('/api/users/google-login', { idToken })
+    return response.data
+  },
 }
 
 export default authService

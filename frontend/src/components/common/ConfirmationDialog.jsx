@@ -30,9 +30,9 @@ export const ConfirmationDialog = ({
         >
           <AlertTriangle size={28} />
         </div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
           {message}
-        </p>
+        </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
           <button
             type="button"

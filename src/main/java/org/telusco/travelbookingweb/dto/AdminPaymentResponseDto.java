@@ -32,4 +32,9 @@ public class AdminPaymentResponseDto {
     private String travelPackageName;
     private String destinationName;
     private String currency = "INR";
+
+    private String refundId;
+    private Double refundAmount;
+    private LocalDateTime refundDate;
+    private String refundReason;
 }

@@ -5,17 +5,19 @@ import { packageService } from '../services/packageService'
 import { paymentService } from '../services/paymentService'
 import { formatCurrency, formatDate, getTodayDateString } from '../utils/formatters'
 import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
 import BookingStatusBadge from '../components/bookings/BookingStatusBadge'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import ConfirmationDialog from '../components/common/ConfirmationDialog'
 import Modal from '../components/common/Modal'
-import { ArrowLeft, Calendar, Users, CreditCard, Edit3, Trash2, CheckCircle2, ShieldCheck, AlertCircle, Printer, Star } from 'lucide-react'
+import { ArrowLeft, Calendar, Users, CreditCard, Edit3, Trash2, CheckCircle2, ShieldCheck, AlertCircle, Printer, Star, XCircle, FileDown, Loader2 } from 'lucide-react'
 
 export const BookingDetails = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
+  const { isAdmin } = useAuth()
 
   const [booking, setBooking] = useState(null)
   const [travelPackage, setTravelPackage] = useState(null)
@@ -33,6 +35,22 @@ export const BookingDetails = () => {
   // Cancel state
   const [isCancelOpen, setIsCancelOpen] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
+
+  // Voucher download state
+  const [downloadingVoucher, setDownloadingVoucher] = useState(false)
+
+  const handleDownloadVoucher = async () => {
+    try {
+      setDownloadingVoucher(true)
+      await bookingService.downloadVoucher(booking.id)
+      toast.success('Official PDF Voucher & Invoice downloaded!')
+    } catch (err) {
+      console.error('Error downloading voucher:', err)
+      toast.error('Failed to download voucher. Please try again.')
+    } finally {
+      setDownloadingVoucher(false)
+    }
+  }
 
   const fetchDetails = async () => {
     try {
@@ -108,9 +126,14 @@ export const BookingDetails = () => {
   const handleCancelBooking = async () => {
     try {
       setCancelLoading(true)
-      await bookingService.deleteBooking(booking.id)
-      toast.success('Booking has been cancelled.')
-      navigate('/bookings')
+      await bookingService.cancelBooking(booking.id)
+      toast.success(
+        isAdmin
+          ? `Booking #${booking.id} cancelled successfully. Seats returned and payment audit records preserved.`
+          : 'Booking has been cancelled.'
+      )
+      setIsCancelOpen(false)
+      await fetchDetails()
     } catch (err) {
       console.error('Cancellation failed:', err)
       toast.error(err.message || 'Failed to cancel booking.')
@@ -323,15 +346,33 @@ export const BookingDetails = () => {
                 </button>
               )}
 
-              {isPaid && (
+              {(isPaid || booking.status === 'CONFIRMED') && (
                 <>
+                  <button
+                    onClick={handleDownloadVoucher}
+                    disabled={downloadingVoucher}
+                    className="btn btn-primary btn-sm"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      backgroundColor: 'var(--primary-dark, #1e3a8a)',
+                      borderColor: 'var(--primary-dark, #1e3a8a)',
+                      color: '#ffffff'
+                    }}
+                    title="Download official PDF trip voucher with QR code and tax invoice"
+                  >
+                    {downloadingVoucher ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                    {downloadingVoucher ? 'Generating PDF...' : 'Download PDF Voucher'}
+                  </button>
+
                   <button
                     onClick={() => window.print()}
                     className="btn btn-secondary btn-sm"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                   >
                     <Printer size={16} />
-                    Print Confirmation
+                    Print
                   </button>
 
                   <Link
@@ -346,18 +387,22 @@ export const BookingDetails = () => {
               )}
             </div>
 
-            {!isPaid && booking.status !== 'CANCELLED' && (
+            {/* Show Cancel / Void if:
+                - Regular traveler on unpaid, active booking (!isPaid && booking.status !== 'CANCELLED')
+                - Admin on any active booking (isAdmin && booking.status !== 'CANCELLED')
+            */}
+            {((!isPaid && booking.status !== 'CANCELLED') || (isAdmin && booking.status !== 'CANCELLED')) && (
               <button
                 onClick={() => setIsCancelOpen(true)}
-                className="btn btn-danger btn-sm"
+                className="btn btn-warning btn-sm"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <Trash2 size={16} />
-                Cancel Reservation
+                <XCircle size={16} />
+                {isAdmin ? 'Cancel / Void Booking' : 'Cancel Reservation'}
               </button>
             )}
 
-            {isPaid && (
+            {isPaid && !isAdmin && (
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 Reservation confirmed. For changes or refunds, please contact support.
               </span>
@@ -438,10 +483,29 @@ export const BookingDetails = () => {
         isOpen={isCancelOpen}
         onClose={() => setIsCancelOpen(false)}
         onConfirm={handleCancelBooking}
-        title="Cancel This Reservation?"
-        message="Cancelling this booking will release your reserved seats back to the available seat pool."
-        confirmText="Confirm Cancellation"
-        confirmVariant="danger"
+        title={isAdmin ? 'Cancel / Void Traveler Booking' : 'Cancel This Reservation?'}
+        message={
+          isAdmin ? (
+            <div style={{ textAlign: 'left', fontSize: '0.9rem', lineHeight: 1.6 }}>
+              <p style={{ marginBottom: '0.75rem', fontWeight: 600 }}>
+                Are you sure you want to administratively cancel/void booking #{booking?.id}?
+              </p>
+              <ul style={{ paddingLeft: '1.25rem', margin: 0, color: 'var(--text-secondary)' }}>
+                <li>Booking status will transition to <strong>CANCELLED</strong>.</li>
+                <li>{booking?.numberOfPeople || 1} reserved seat(s) will be returned to the travel package.</li>
+                <li>All successful payment and financial audit records will be <strong>strictly preserved</strong>.</li>
+                <li>Any pending payment attempts will be marked as <strong>FAILED</strong>.</li>
+                <li style={{ marginTop: '0.4rem', color: '#b45309', fontWeight: 600 }}>
+                  Note: This administrative action voids the reservation and does not automatically trigger a payment refund.
+                </li>
+              </ul>
+            </div>
+          ) : (
+            'Cancelling this booking will release your reserved seats back to the available seat pool.'
+          )
+        }
+        confirmText={isAdmin ? 'Yes, Cancel Booking' : 'Confirm Cancellation'}
+        confirmVariant={isAdmin ? 'warning' : 'danger'}
         loading={cancelLoading}
       />
     </div>

@@ -6,6 +6,7 @@ import { paymentAdminService } from '../../services/paymentAdminService'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { useToast } from '../../context/ToastContext'
 import BookingStatusBadge from '../../components/bookings/BookingStatusBadge'
+import PaymentStatusBadge from '../../components/payments/PaymentStatusBadge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import EmptyState from '../../components/common/EmptyState'
@@ -21,7 +22,9 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Briefcase
+  Briefcase,
+  FileDown,
+  Loader2
 } from 'lucide-react'
 
 export const ManageBookings = () => {
@@ -36,9 +39,27 @@ export const ManageBookings = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
 
-  // Cancel target
-  const [cancelTargetId, setCancelTargetId] = useState(null)
+  // Modal targets
+  const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Voucher download state
+  const [downloadingId, setDownloadingId] = useState(null)
+
+  const handleDownloadVoucher = async (bookingId) => {
+    try {
+      setDownloadingId(bookingId)
+      await bookingService.downloadVoucher(bookingId)
+      toast.success(`Voucher for Booking #${bookingId} downloaded!`)
+    } catch (err) {
+      console.error('Failed to download voucher:', err)
+      toast.error(`Failed to download voucher for Booking #${bookingId}`)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   const fetchAdminBookings = async () => {
     try {
@@ -82,19 +103,34 @@ export const ManageBookings = () => {
   }, [])
 
   const handleConfirmCancel = async () => {
-    if (!cancelTargetId) return
+    if (!cancelTarget) return
     try {
       setCancelLoading(true)
-      await bookingService.deleteBooking(cancelTargetId)
-      toast.success(`Booking #${cancelTargetId} cancelled successfully. Seats returned to package.`)
-      // Refresh list
+      await bookingService.cancelBooking(cancelTarget.id)
+      toast.success(`Booking #${cancelTarget.id} cancelled successfully. Seats returned and payment audit records preserved.`)
+      setCancelTarget(null)
       await fetchAdminBookings()
-      setCancelTargetId(null)
     } catch (err) {
       console.error('Failed to cancel booking:', err)
       toast.error(err.message || 'Could not cancel booking.')
     } finally {
       setCancelLoading(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    try {
+      setDeleteLoading(true)
+      await bookingService.deleteBooking(deleteTarget.id)
+      toast.success(`Booking #${deleteTarget.id} deleted successfully.`)
+      setDeleteTarget(null)
+      await fetchAdminBookings()
+    } catch (err) {
+      console.error('Failed to delete booking:', err)
+      toast.error(err.message || 'Could not delete booking.')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -302,15 +338,46 @@ export const ManageBookings = () => {
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {pay ? (
-                          <span className={`badge ${pay.status === 'SUCCESS' ? 'badge-success' : pay.status === 'FAILED' ? 'badge-danger' : 'badge-warning'}`}>
-                            {pay.status === 'SUCCESS' ? 'Paid' : pay.status}
-                          </span>
+                          <>
+                            <PaymentStatusBadge status={pay.status} />
+                            {isCancelled && pay.status === 'SUCCESS' && (
+                              <Link
+                                to="/admin/payments"
+                                style={{ display: 'block', fontSize: '0.72rem', color: '#7e22ce', fontWeight: 600, marginTop: '4px', textDecoration: 'none' }}
+                                title="Go to Manage Payments to process refund"
+                              >
+                                Refund Eligible →
+                              </Link>
+                            )}
+                          </>
                         ) : (
                           <span className="badge badge-warning">Unpaid</span>
                         )}
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleDownloadVoucher(b.id)}
+                            disabled={downloadingId === b.id}
+                            className="btn btn-outline btn-sm"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              borderColor: '#cbd5e1',
+                              color: '#1e3a8a',
+                              padding: '0.25rem 0.6rem'
+                            }}
+                            title="Download official PDF trip voucher & tax invoice"
+                          >
+                            {downloadingId === b.id ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <FileDown size={13} />
+                            )}
+                            Voucher
+                          </button>
+
                           <Link
                             to={`/bookings/${b.id}`}
                             className="btn btn-secondary btn-sm"
@@ -318,13 +385,28 @@ export const ManageBookings = () => {
                           >
                             <Eye size={14} /> Details
                           </Link>
-                          <button
-                            onClick={() => setCancelTargetId(b.id)}
-                            className="btn btn-danger btn-sm"
-                            title={pay?.status === 'SUCCESS' ? "Warning: Paid reservation. Deletion will remove financial record" : "Permanently delete booking"}
-                          >
-                            <Trash2 size={14} /> Delete
-                          </button>
+
+                          {/* Show Cancel / Void for active (not cancelled) bookings */}
+                          {!isCancelled && (
+                            <button
+                              onClick={() => setCancelTarget(b)}
+                              className="btn btn-warning btn-sm"
+                              title="Cancel / void booking, restore seats and preserve audit records"
+                            >
+                              <XCircle size={14} /> Cancel / Void
+                            </button>
+                          )}
+
+                          {/* Never show Delete for confirmed or successfully paid bookings */}
+                          {!((b.status?.toUpperCase() === 'CONFIRMED') || (pay?.status === 'SUCCESS')) && (
+                            <button
+                              onClick={() => setDeleteTarget(b)}
+                              className="btn btn-danger btn-sm"
+                              title="Permanently delete unfinalized booking"
+                            >
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -336,22 +418,60 @@ export const ManageBookings = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Cancel / Void Confirmation Modal */}
       <ConfirmationDialog
-        isOpen={Boolean(cancelTargetId)}
-        onClose={() => setCancelTargetId(null)}
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
         onConfirm={handleConfirmCancel}
-        title="Delete Traveler Booking"
-        message={`Are you sure you want to permanently delete booking #${cancelTargetId}? The reservation will be removed from the database and the ${
-          bookings.find((x) => x.id === cancelTargetId)?.numberOfPeople || ''
-        } seat(s) will be returned to the travel package.${
-          paymentsMap[cancelTargetId]?.status === 'SUCCESS'
-            ? ' WARNING: This booking has a completed payment record that will also be removed by the server.'
-            : ''
-        }`}
-        confirmText="Yes, Delete Booking"
-        confirmVariant="danger"
+        title="Cancel / Void Traveler Booking"
+        message={
+          cancelTarget ? (
+            <div style={{ textAlign: 'left', fontSize: '0.9rem', lineHeight: 1.6 }}>
+              <p style={{ marginBottom: '0.75rem', fontWeight: 600 }}>
+                Are you sure you want to cancel/void booking #{cancelTarget.id}?
+              </p>
+              <ul style={{ paddingLeft: '1.25rem', margin: 0, color: 'var(--text-secondary)' }}>
+                <li>The booking status will become <strong>CANCELLED</strong>.</li>
+                <li>{cancelTarget.numberOfPeople || 1} reserved seat(s) will be returned to the travel package.</li>
+                <li>All successful payment and financial audit records will be <strong>strictly preserved</strong>.</li>
+                <li>Any pending payment attempts will be marked as <strong>FAILED</strong>.</li>
+                <li style={{ marginTop: '0.4rem', color: '#b45309', fontWeight: 600 }}>
+                  Note: This administrative action voids the reservation and does not automatically issue a payment refund.
+                </li>
+              </ul>
+            </div>
+          ) : ''
+        }
+        confirmText="Yes, Cancel Booking"
+        confirmVariant="warning"
         loading={cancelLoading}
+      />
+
+      {/* Permanent Delete Confirmation Modal */}
+      <ConfirmationDialog
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title="Permanently Delete Booking"
+        message={
+          deleteTarget ? (
+            <div style={{ textAlign: 'left', fontSize: '0.9rem', lineHeight: 1.6 }}>
+              <p style={{ marginBottom: '0.75rem', fontWeight: 600 }}>
+                Are you sure you want to permanently delete booking #{deleteTarget.id}?
+              </p>
+              <ul style={{ paddingLeft: '1.25rem', margin: 0, color: 'var(--text-secondary)' }}>
+                <li>This permanently removes the booking and non-finalized payment records from the database.</li>
+                <li>This operation cannot be undone.</li>
+                {deleteTarget.status !== 'CANCELLED' && (
+                  <li>{deleteTarget.numberOfPeople || 1} seat(s) will be returned to the package.</li>
+                )}
+              </ul>
+            </div>
+          ) : ''
+        }
+        confirmText="Yes, Delete Permanently"
+        confirmVariant="danger"
+        loading={deleteLoading}
       />
     </div>
   )

@@ -28,4 +28,9 @@ public class PaymentDto {
     private Long bookingId;
 
     private String currency = "INR";
+
+    private String refundId;
+    private Double refundAmount;
+    private LocalDateTime refundDate;
+    private String refundReason;
 }

@@ -91,6 +91,27 @@ public class RazorpayService {
         }
     }
 
+    public String issueRefund(String paymentId, long amountPaise, String reason) {
+        RazorpayClient client = razorpayConfig.getClient();
+        try {
+            JSONObject refundRequest = new JSONObject();
+            if (amountPaise > 0) {
+                refundRequest.put("amount", amountPaise);
+            }
+            if (reason != null && !reason.trim().isEmpty()) {
+                JSONObject notes = new JSONObject();
+                notes.put("reason", reason.trim());
+                refundRequest.put("notes", notes);
+            }
+
+            com.razorpay.Refund refund = client.payments.refund(paymentId, refundRequest);
+            return refund.get("id");
+        } catch (RazorpayException e) {
+            log.error("Failed to issue Razorpay refund for payment {}: {}", paymentId, e.getMessage());
+            throw new PaymentVerificationException("Failed to process Razorpay refund: " + e.getMessage());
+        }
+    }
+
     private String calculateHmacSha256(String data, String secret) {
         try {
             Mac mac = Mac.getInstance(HMAC_SHA256);

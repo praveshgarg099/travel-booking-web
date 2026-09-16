@@ -180,6 +180,18 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(400, exception.getMessage());
     }
 
+    @ExceptionHandler(InvalidVerificationCodeException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidVerificationCodeException(InvalidVerificationCodeException exception) {
+        return new ErrorResponse(400, exception.getMessage());
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleEmailNotVerifiedException(EmailNotVerifiedException exception) {
+        return new ErrorResponse(403, exception.getMessage());
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException exception) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

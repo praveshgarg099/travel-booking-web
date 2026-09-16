@@ -72,7 +72,10 @@ public class SecurityConfig {
 
                         // Public APIs
                         .requestMatchers(
-                                "/api/users/login"
+                                "/api/users/login",
+                                "/api/users/verify-email",
+                                "/api/users/resend-verification",
+                                "/api/users/google-login"
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/users")

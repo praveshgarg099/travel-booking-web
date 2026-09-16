@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import GoogleSignInButton from '../components/auth/GoogleSignInButton'
 import { Compass, User, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export const Register = () => {
@@ -52,19 +53,13 @@ export const Register = () => {
       }
 
       await authService.register(registerPayload)
-      toast.success('Account created successfully! Logging you in...')
+      toast.success('Account created! A 6-digit verification code has been dispatched.')
 
-      // Automatically sign the user in with new credentials
-      try {
-        await login({
-          email: formData.email.trim(),
-          password: formData.password,
-        })
-        navigate('/dashboard', { replace: true })
-      } catch (loginErr) {
-        // Fallback to login page if immediate token acquisition fails
-        navigate('/login', { replace: true })
-      }
+      // Redirect user to VerifyEmail page
+      navigate('/verify-email', {
+        state: { email: formData.email.trim() },
+        replace: true,
+      })
     } catch (err) {
       console.error('Registration error:', err)
       setErrorMsg(err.message || 'Registration failed. Please check your information.')
@@ -129,6 +124,27 @@ export const Register = () => {
             <span>{errorMsg}</span>
           </div>
         )}
+
+        {/* Google OAuth Sign-Up */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <GoogleSignInButton text="Sign up with Google" />
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            margin: '1.5rem 0',
+            color: 'var(--text-secondary)',
+            fontSize: '0.8rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+          <span style={{ padding: '0 0.75rem', fontWeight: 600 }}>or sign up with email</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+        </div>
 
         <form onSubmit={handleSubmit}>
           {/* Full Name */}

@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { Compass, Mail, Lock, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react'
+import GoogleSignInButton from '../components/auth/GoogleSignInButton'
+import { Compass, Mail, Lock, ArrowRight, AlertCircle, ShieldCheck, MailCheck } from 'lucide-react'
 
 export const Login = () => {
   const { login } = useAuth()
@@ -18,6 +19,7 @@ export const Login = () => {
   })
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [needsVerification, setNeedsVerification] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -27,6 +29,7 @@ export const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrorMsg('')
+    setNeedsVerification(false)
 
     if (!formData.email || !formData.password) {
       setErrorMsg('Please enter both email and password.')
@@ -45,8 +48,16 @@ export const Login = () => {
       navigate(dest, { replace: true })
     } catch (err) {
       console.error('Login error:', err)
-      setErrorMsg(err.message || 'Invalid email or password.')
-      toast.error(err.message || 'Invalid email or password.')
+      const isUnverified =
+        err.status === 403 && (err.message || '').toLowerCase().includes('verif')
+
+      if (isUnverified) {
+        setNeedsVerification(true)
+        setErrorMsg('Please verify your email address to log in.')
+      } else {
+        setErrorMsg(err.message || 'Invalid email or password.')
+      }
+      toast.error(err.message || 'Authentication failed.')
     } finally {
       setLoading(false)
     }
@@ -88,7 +99,37 @@ export const Login = () => {
           </p>
         </div>
 
-        {errorMsg && (
+        {needsVerification && (
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: '#fffbeb',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              border: '1px solid #fde68a',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
+              <MailCheck size={18} />
+              <span>Email Verification Required</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#b45309', lineHeight: 1.4 }}>
+              Your account requires a quick one-time email verification before signing in.
+            </p>
+            <Link
+              to={`/verify-email?email=${encodeURIComponent(formData.email.trim())}`}
+              className="btn btn-primary btn-sm"
+              style={{ alignSelf: 'flex-start' }}
+            >
+              Verify Email Now
+            </Link>
+          </div>
+        )}
+
+        {errorMsg && !needsVerification && (
           <div
             style={{
               display: 'flex',
@@ -107,6 +148,27 @@ export const Login = () => {
             <span>{errorMsg}</span>
           </div>
         )}
+
+        {/* Google OAuth Sign-In */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <GoogleSignInButton text="Sign in with Google" />
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            margin: '1.5rem 0',
+            color: 'var(--text-secondary)',
+            fontSize: '0.8rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+          <span style={{ padding: '0 0.75rem', fontWeight: 600 }}>or sign in with email</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+        </div>
 
         <form onSubmit={handleSubmit}>
           {/* Email Field */}

@@ -129,7 +129,7 @@ export const Footer = () => {
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
               <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Mail size={16} color="var(--primary)" /> support@yatramigo.com
+                <Mail size={16} color="var(--primary)" /> support@yatramigo.dev
               </p>
               <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Phone size={16} color="var(--primary)" /> +1 (800) 555-TRAVEL

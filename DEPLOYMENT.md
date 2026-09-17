@@ -59,10 +59,16 @@ graph TD
 | `RAZORPAY_KEY_ID` | **YES** | `rzp_test_...` or `rzp_live_...` | Razorpay public API key ID (transmitted to checkout clients). |
 | `RAZORPAY_KEY_SECRET` | **YES** | Razorpay secret key | **STRICTLY PRIVATE** server key used for HMAC signature and order APIs. |
 | `RAZORPAY_WEBHOOK_SECRET` | Optional | Webhook secret | **STRICTLY PRIVATE** secret configured in Razorpay dashboard for webhook signing. |
+| `GOOGLE_CLIENT_ID` | Conditional | Google OAuth client ID | Required for verifying Google Sign-In ID tokens. |
+| `SPRING_MAIL_HOST` | **YES** | `smtp.gmail.com` | Outbound SMTP host. |
+| `SPRING_MAIL_PORT` | **YES** | `587` | Outbound SMTP port (587 for STARTTLS, 465 for SSL). |
+| `SPRING_MAIL_USERNAME` | **YES** | `sender@gmail.com` | Authenticated SMTP account username. |
+| `SPRING_MAIL_PASSWORD` | **YES** | 16-char app password | **STRICTLY PRIVATE** SMTP account password or Google App Password. |
+| `MAIL_FROM` | Optional | `sender@gmail.com` | Sender From address (must match SMTP account or verified domain). |
 
 > [!CAUTION]
 > **CRITICAL SECRET HYGIENE**:
-> `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `JWT_SECRET`, and `DB_PASSWORD` must NEVER be committed to Git, logged to consoles, or bundled into frontend assets.
+> `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `SPRING_MAIL_PASSWORD`, `JWT_SECRET`, and `DB_PASSWORD` must NEVER be committed to Git, logged to consoles, or bundled into frontend assets.
 
 ### Frontend Environment Variables (`frontend/.env.example`)
 

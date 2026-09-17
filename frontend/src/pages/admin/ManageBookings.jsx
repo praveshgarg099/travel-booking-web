@@ -84,9 +84,19 @@ export const ManageBookings = () => {
       setPackagesMap(pMap)
 
       const payMap = {}
-      if (paymentsData.status === 'fulfilled' && paymentsData.value) {
-        paymentsData.value.forEach((pay) => {
-          payMap[pay.bookingId] = pay
+      if (paymentsData.status === 'fulfilled' && Array.isArray(paymentsData.value)) {
+        const sortedPayments = [...paymentsData.value].sort((a, b) => (a.paymentId || 0) - (b.paymentId || 0))
+        sortedPayments.forEach((pay) => {
+          const current = payMap[pay.bookingId]
+          if (!current) {
+            payMap[pay.bookingId] = pay
+          } else if (current.status === 'SUCCESS' || current.status === 'REFUNDED' || current.status === 'PARTIALLY_REFUNDED') {
+            if (pay.status === 'SUCCESS' || pay.status === 'REFUNDED' || pay.status === 'PARTIALLY_REFUNDED') {
+              payMap[pay.bookingId] = pay
+            }
+          } else {
+            payMap[pay.bookingId] = pay
+          }
         })
       }
       setPaymentsMap(payMap)

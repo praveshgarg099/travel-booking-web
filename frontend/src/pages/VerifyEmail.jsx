@@ -355,26 +355,28 @@ export const VerifyEmail = () => {
           )}
         </div>
 
-        {/* Dev note */}
-        <div
-          style={{
-            marginTop: '2rem',
-            padding: '0.85rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--slate-50)',
-            border: '1px solid var(--border-subtle)',
-            fontSize: '0.8rem',
-            color: 'var(--slate-600)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '0.5rem',
-          }}
-        >
-          <ShieldCheck size={16} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
-          <span>
-            <strong>Development Notice:</strong> If live SMTP email credentials are not set in your environment, the 6-digit verification code is printed directly to the Spring Boot backend console.
-          </span>
-        </div>
+        {/* Dev note (visible only in development environment) */}
+        {import.meta.env.DEV && (
+          <div
+            style={{
+              marginTop: '2rem',
+              padding: '0.85rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--slate-50)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.8rem',
+              color: 'var(--slate-600)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.5rem',
+            }}
+          >
+            <ShieldCheck size={16} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+            <span>
+              <strong>Development Notice:</strong> When SMTP is unconfigured in local development, verification codes are logged to the backend console. In production, real SMTP delivery is strictly enforced.
+            </span>
+          </div>
+        )}
 
         {/* Back to sign in */}
         <div

@@ -1,18 +1,21 @@
 package org.telusco.travelbookingweb.service;
 
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.stereotype.Service;
-
-import java.nio.charset.StandardCharsets;
-
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.mail.MailException;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+import org.telusco.travelbookingweb.exception.EmailDeliveryException;
+
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class EmailService {
@@ -22,8 +25,8 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final Environment environment;
 
-    @Value("${mail.from.address:no-reply@yatramigo.dev}")
-    private String fromAddress;
+    @Value("${MAIL_FROM:${mail.from.address:}}")
+    private String configuredFromAddress;
 
     @Value("${mail.from.name:Yatramigo}")
     private String fromName;
@@ -47,51 +50,75 @@ public class EmailService {
         return mailSender != null && mailUsername != null && !mailUsername.trim().isEmpty();
     }
 
+    /**
+     * Resolves an effective sender address that is strictly compatible with the authenticated SMTP account.
+     * If MAIL_FROM is explicitly set to a custom verified address, it is used.
+     * Otherwise, if using authenticated SMTP (e.g. Gmail), it defaults to spring.mail.username to avoid
+     * '553 Sender address rejected' errors.
+     */
+    public String getEffectiveFromAddress() {
+        if (configuredFromAddress != null && !configuredFromAddress.trim().isEmpty()
+                && !configuredFromAddress.contains("yatramigo.dev")) {
+            return configuredFromAddress.trim();
+        }
+        if (mailUsername != null && !mailUsername.trim().isEmpty()) {
+            return mailUsername.trim();
+        }
+        return "no-reply@yatramigo.com";
+    }
+
+    /**
+     * Dispatches a 6-digit email verification OTP code.
+     * Fails safely with EmailDeliveryException if SMTP is unavailable or dispatch fails.
+     */
     public void sendVerificationOtp(String toEmail, String userName, String otpCode) {
-        log.info("Dispatching email verification OTP request for recipient: {}", toEmail);
+        log.info("Attempting verification email delivery to configured recipient");
 
         if (!isMailConfigured()) {
-            if (isProductionEnvironment()) {
-                log.error("CRITICAL: SMTP mail credentials are not configured in production. Cannot send verification email to {}", toEmail);
-                throw new IllegalStateException("Email service is unconfigured. Cannot deliver verification code.");
+            if (isProductionEnvironment() || !devOtpLogging) {
+                log.error("SMTP mail credentials are not configured. Cannot deliver verification email.");
+                throw new EmailDeliveryException("Unable to send verification email. Please try again later.");
             }
 
-            if (devOtpLogging) {
-                log.warn("================================================================================");
-                log.warn(" [DEV MODE / SMTP UNCONFIGURED]");
-                log.warn(" Email Verification Code for {}: >>> {} <<< (Valid for 15 minutes)", toEmail, otpCode);
-                log.warn(" Configure SPRING_MAIL_USERNAME & SPRING_MAIL_PASSWORD to send real SMTP emails.");
-                log.warn("================================================================================");
-            } else {
-                log.info("Email service simulated in development without console OTP logging for {}", toEmail);
-            }
+            // Safe dev-only logging when explicitly enabled in local development
+            log.warn("================================================================================");
+            log.warn(" [DEV MODE / SMTP UNCONFIGURED]");
+            log.warn(" Email Verification Code for {}: >>> {} <<< (Valid for 15 minutes)", toEmail, otpCode);
+            log.warn(" Configure SPRING_MAIL_USERNAME & SPRING_MAIL_PASSWORD to send real SMTP emails.");
+            log.warn("================================================================================");
             return;
         }
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
 
-            helper.setFrom(fromAddress, fromName);
+            String effectiveSender = getEffectiveFromAddress();
+            helper.setFrom(effectiveSender, fromName);
             helper.setTo(toEmail);
-            helper.setSubject("Your Yatramigo Email Verification Code: " + otpCode);
+            helper.setSubject("Verify your Yatramigo account");
 
             String htmlContent = buildOtpHtml(userName, otpCode);
-            helper.setText(htmlContent, true);
+            String plainText = buildOtpPlainText(userName, otpCode);
+            helper.setText(plainText, htmlContent);
 
             mailSender.send(message);
-            log.info("Successfully sent verification OTP email to {}", toEmail);
+            log.info("Verification email successfully dispatched to configured recipient");
+        } catch (MailException | MessagingException e) {
+            log.error("SMTP verification email delivery failed: {}", e.getClass().getSimpleName());
+            throw new EmailDeliveryException("Unable to send verification email. Please try again later.", e);
         } catch (Exception e) {
-            log.error("Failed to send verification email to {}: {}", toEmail, e.getMessage());
-            if (isProductionEnvironment()) {
-                throw new RuntimeException("Failed to dispatch verification email. Please try again later.");
-            }
+            log.error("Unexpected error during verification email delivery: {}", e.getClass().getSimpleName());
+            throw new EmailDeliveryException("Unable to send verification email. Please try again later.", e);
         }
     }
 
+    /**
+     * Dispatches a confirmation email after successful account verification.
+     */
     public void sendWelcomeEmail(String toEmail, String userName) {
         if (!isMailConfigured()) {
-            log.info("[DEV MODE] Welcome email simulated for {}", toEmail);
+            log.info("Welcome email delivery skipped (mail unconfigured)");
             return;
         }
 
@@ -99,7 +126,7 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
 
-            helper.setFrom(fromAddress, fromName);
+            helper.setFrom(getEffectiveFromAddress(), fromName);
             helper.setTo(toEmail);
             helper.setSubject("Welcome to Yatramigo - Your Journey Begins!");
 
@@ -109,13 +136,47 @@ public class EmailService {
                       <p style="color: #334155; font-size: 15px; line-height: 1.5;">Your account is now fully verified. You can explore curated tour packages, book dream destinations, and download travel vouchers anytime.</p>
                       <p style="color: #64748b; font-size: 13px;">Happy travels,<br>The Yatramigo Team</p>
                     </div>
-                    """.formatted(userName != null ? userName : "Traveler");
+                    """.formatted(userName != null && !userName.isBlank() ? userName : "Traveler");
 
             helper.setText(html, true);
             mailSender.send(message);
         } catch (Exception e) {
-            log.warn("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
+            log.warn("Welcome email delivery notice: {}", e.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * Safe service-level diagnostic for verifying JavaMailSender connectivity and authentication.
+     */
+    public boolean testSmtpConnection() throws MessagingException {
+        if (!isMailConfigured()) {
+            throw new IllegalStateException("SMTP credentials are not configured");
+        }
+        if (mailSender instanceof JavaMailSenderImpl impl) {
+            impl.testConnection();
+            log.info("SMTP connection and authentication diagnostic succeeded");
+            return true;
+        }
+        return false;
+    }
+
+    private String buildOtpPlainText(String userName, String otpCode) {
+        String greeting = (userName != null && !userName.isBlank()) ? userName : "Traveler";
+        return """
+                Welcome to Yatramigo!
+
+                Hello %s,
+
+                Your email verification code is:
+                %s
+
+                This code expires in 15 minutes.
+
+                If you did not create this account, you can ignore this email.
+
+                Happy travels,
+                The Yatramigo Team
+                """.formatted(greeting, otpCode);
     }
 
     private String buildOtpHtml(String userName, String otpCode) {
@@ -143,6 +204,7 @@ public class EmailService {
                             <td style="padding: 36px;">
                               <h2 style="color: #0f172a; margin-top: 0; font-size: 20px; font-weight: 600;">Verify Your Email Address</h2>
                               <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+                                Welcome to Yatramigo!<br><br>
                                 Hello %s,<br>
                                 Thank you for creating an account with Yatramigo. To complete your registration and secure your account, please enter the 6-digit verification code below:
                               </p>
@@ -155,7 +217,7 @@ public class EmailService {
                               </p>
                               <div style="border-top: 1px solid #e2e8f0; margin-top: 32px; padding-top: 20px;">
                                 <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin: 0;">
-                                  If you did not attempt to sign up for Yatramigo, please ignore this email. Your email address remains safe.
+                                  If you did not create this account, you can ignore this email.
                                 </p>
                               </div>
                             </td>

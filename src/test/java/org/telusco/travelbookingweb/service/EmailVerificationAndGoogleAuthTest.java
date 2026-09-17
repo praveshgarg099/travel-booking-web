@@ -119,6 +119,25 @@ class EmailVerificationAndGoogleAuthTest {
         verify(emailService).sendVerificationOtp(eq("new@example.com"), eq("New Traveler"), argThat(code -> code != null && code.matches("\\d{6}")));
     }
 
+    @Test
+    @DisplayName("createUser propagates EmailDeliveryException safely when email dispatch fails")
+    void testCreateUser_SmtpFailure_ThrowsEmailDeliveryException() {
+        UserDto dto = new UserDto();
+        dto.setName("New Traveler");
+        dto.setEmail("smtpfail@example.com");
+        dto.setPassword("Secret@123");
+
+        when(userRepository.findByEmail("smtpfail@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("Secret@123")).thenReturn("hashedPassword");
+        when(passwordEncoder.encode(argThat(s -> s != null && s.toString().matches("\\d{6}")))).thenReturn("hashedOtpCode");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new org.telusco.travelbookingweb.exception.EmailDeliveryException("Unable to send verification email. Please try again later."))
+                .when(emailService).sendVerificationOtp(eq("smtpfail@example.com"), eq("New Traveler"), anyString());
+
+        assertThrows(org.telusco.travelbookingweb.exception.EmailDeliveryException.class,
+                () -> userService.createUser(dto));
+    }
+
     // =========================================================================
     // 2. OTP VERIFICATION & BRUTE FORCE DEFENSE
     // =========================================================================
@@ -239,6 +258,19 @@ class EmailVerificationAndGoogleAuthTest {
         assertTrue(ex.getMessage().contains("Please wait"));
         assertTrue(ex.getMessage().contains("seconds"));
         verify(emailService, never()).sendVerificationOtp(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("resendVerificationCode propagates EmailDeliveryException when email dispatch fails")
+    void testResendVerificationCode_SmtpFailure_ThrowsEmailDeliveryException() {
+        testUser.setLastVerificationCodeSentAt(LocalDateTime.now().minusSeconds(65));
+        when(userRepository.findByEmail("kavita@example.com")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.encode(anyString())).thenReturn("new_hashed_otp");
+        doThrow(new org.telusco.travelbookingweb.exception.EmailDeliveryException("Unable to send verification email. Please try again later."))
+                .when(emailService).sendVerificationOtp(eq("kavita@example.com"), eq("Kavita Patel"), anyString());
+
+        assertThrows(org.telusco.travelbookingweb.exception.EmailDeliveryException.class,
+                () -> userService.resendVerificationCode("kavita@example.com"));
     }
 
     // =========================================================================

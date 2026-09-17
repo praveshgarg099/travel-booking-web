@@ -14,6 +14,7 @@ import org.telusco.travelbookingweb.entity.*;
 import org.telusco.travelbookingweb.exception.*;
 import org.telusco.travelbookingweb.repository.BookingRepository;
 import org.telusco.travelbookingweb.repository.PaymentRepository;
+import org.telusco.travelbookingweb.repository.TravelPackageRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,6 +32,9 @@ class PaymentServiceTest {
 
     @Mock
     private BookingRepository bookingRepository;
+
+    @Mock
+    private TravelPackageRepository travelPackageRepository;
 
     @Mock
     private AuthenticationService authenticationService;
@@ -243,6 +247,7 @@ class PaymentServiceTest {
         successPayment.setAmount(3000.0);
         successPayment.setStatus(PaymentStatus.SUCCESS);
         successPayment.setRazorpayPaymentId("pay_rzp_full");
+        testBooking.setStatus(BookingStatus.CONFIRMED);
         successPayment.setBooking(testBooking);
 
         when(authenticationService.getCurrentUser()).thenReturn(adminUser);
@@ -262,7 +267,11 @@ class PaymentServiceTest {
         assertEquals("rfnd_12345", response.getRefundId());
         assertEquals(3000.0, response.getRefundAmount());
         assertEquals(PaymentStatus.REFUNDED, successPayment.getStatus());
+        assertEquals(BookingStatus.CANCELLED, testBooking.getStatus());
+        assertEquals(12, testPackage.getAvailableSeats());
         verify(paymentRepository, times(1)).save(successPayment);
+        verify(bookingRepository, times(1)).save(testBooking);
+        verify(travelPackageRepository, times(1)).save(testPackage);
     }
 
     @Test
@@ -355,4 +364,60 @@ class PaymentServiceTest {
         assertTrue(ex.getMessage().contains("exceeds remaining refundable balance"));
         verify(paymentRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("Admin can confirm cash/offline payment, updating payment to SUCCESS and booking to CONFIRMED")
+    void testConfirmCashPaymentSuccess() {
+        User adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setRole(Role.ADMIN);
+
+        Payment cashPayment = new Payment();
+        cashPayment.setId(88L);
+        cashPayment.setAmount(3000.0);
+        cashPayment.setPaymentMethod(PaymentMethod.CASH);
+        cashPayment.setStatus(PaymentStatus.PENDING);
+        cashPayment.setBooking(testBooking);
+
+        when(authenticationService.getCurrentUser()).thenReturn(adminUser);
+        when(paymentRepository.findById(88L)).thenReturn(Optional.of(cashPayment));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AdminPaymentResponseDto response = paymentService.confirmCashPayment(88L);
+
+        assertNotNull(response);
+        assertEquals(PaymentStatus.SUCCESS, response.getStatus());
+        assertEquals(PaymentStatus.SUCCESS, cashPayment.getStatus());
+        assertEquals(BookingStatus.CONFIRMED, testBooking.getStatus());
+        verify(paymentRepository, times(1)).save(cashPayment);
+        verify(bookingRepository, times(1)).save(testBooking);
+    }
+
+    @Test
+    @DisplayName("Non-admin cannot confirm cash/offline payment")
+    void testNonAdminCannotConfirmCashPayment() {
+        when(authenticationService.getCurrentUser()).thenReturn(testUser);
+
+        assertThrows(ForbiddenException.class, () -> paymentService.confirmCashPayment(88L));
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Cannot confirm payment that is already in SUCCESS status")
+    void testCannotConfirmAlreadySuccessfulPayment() {
+        User adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setRole(Role.ADMIN);
+
+        Payment successPayment = new Payment();
+        successPayment.setId(88L);
+        successPayment.setStatus(PaymentStatus.SUCCESS);
+
+        when(authenticationService.getCurrentUser()).thenReturn(adminUser);
+        when(paymentRepository.findById(88L)).thenReturn(Optional.of(successPayment));
+
+        assertThrows(InvalidPaymentStateException.class, () -> paymentService.confirmCashPayment(88L));
+        verify(paymentRepository, never()).save(any());
+    }
 }
+

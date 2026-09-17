@@ -63,7 +63,7 @@ export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
         key: orderData.keyId,
         amount: orderData.amountPaise,
         currency: orderData.currency || 'INR',
-        name: 'Travel Booking Web',
+        name: 'Yatramigo',
         description: orderData.packageTitle || 'Travel Package Reservation',
         order_id: orderData.orderId,
         prefill: {

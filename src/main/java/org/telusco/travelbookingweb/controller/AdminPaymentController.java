@@ -34,4 +34,9 @@ public class AdminPaymentController {
             @jakarta.validation.Valid @RequestBody(required = false) org.telusco.travelbookingweb.dto.RefundRequestDto request) {
         return org.springframework.http.ResponseEntity.ok(paymentService.processRefund(id, request));
     }
+
+    @PostMapping("/{id}/confirm")
+    public org.springframework.http.ResponseEntity<AdminPaymentResponseDto> confirmPayment(@PathVariable Long id) {
+        return org.springframework.http.ResponseEntity.ok(paymentService.confirmCashPayment(id));
+    }
 }

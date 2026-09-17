@@ -11,6 +11,7 @@ import org.telusco.travelbookingweb.entity.*;
 import org.telusco.travelbookingweb.exception.*;
 import org.telusco.travelbookingweb.repository.BookingRepository;
 import org.telusco.travelbookingweb.repository.PaymentRepository;
+import org.telusco.travelbookingweb.repository.TravelPackageRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,6 +27,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
+    private final TravelPackageRepository travelPackageRepository;
     private final AuthenticationService authenticationService;
     private final RazorpayService razorpayService;
     private final RazorpayConfig razorpayConfig;
@@ -33,11 +35,13 @@ public class PaymentService {
     public PaymentService(
             PaymentRepository paymentRepository,
             BookingRepository bookingRepository,
+            TravelPackageRepository travelPackageRepository,
             AuthenticationService authenticationService,
             RazorpayService razorpayService,
             RazorpayConfig razorpayConfig) {
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
+        this.travelPackageRepository = travelPackageRepository;
         this.authenticationService = authenticationService;
         this.razorpayService = razorpayService;
         this.razorpayConfig = razorpayConfig;
@@ -431,6 +435,44 @@ public class PaymentService {
     }
 
     @Transactional
+    public AdminPaymentResponseDto confirmCashPayment(Long paymentId) {
+        User currentUser = authenticationService.getCurrentUser();
+        if (currentUser.getRole() != Role.ADMIN) {
+            throw new ForbiddenException("Only administrators are authorized to confirm payments");
+        }
+
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found"));
+
+        if (payment.getStatus() == PaymentStatus.SUCCESS) {
+            throw new InvalidPaymentStateException("Payment has already been confirmed as SUCCESS");
+        }
+
+        if (payment.getStatus() == PaymentStatus.REFUNDED) {
+            throw new InvalidPaymentStateException("Cannot confirm a refunded payment");
+        }
+
+        payment.setStatus(PaymentStatus.SUCCESS);
+        if (payment.getPaymentMethod() == null) {
+            payment.setPaymentMethod(PaymentMethod.CASH);
+        }
+        payment.setPaymentDate(LocalDateTime.now());
+        payment.setUpdatedAt(LocalDateTime.now());
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        Booking booking = payment.getBooking();
+        if (booking != null) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            bookingRepository.save(booking);
+            log.info("Admin {} confirmed payment {} as SUCCESS for booking {}",
+                    currentUser.getEmail(), savedPayment.getId(), booking.getId());
+        }
+
+        return mapToAdminPaymentResponseDto(savedPayment);
+    }
+
+    @Transactional
     public RefundResponseDto processRefund(Long paymentId, RefundRequestDto request) {
         User currentUser = authenticationService.getCurrentUser();
         if (currentUser.getRole() != Role.ADMIN) {
@@ -482,12 +524,30 @@ public class PaymentService {
 
         Payment savedPayment = paymentRepository.save(payment);
 
+        // If full refund is issued on a confirmed booking, release seats and mark booking cancelled
+        Booking booking = payment.getBooking();
+        if (newStatus == PaymentStatus.REFUNDED && booking != null) {
+            if (booking.getStatus() != BookingStatus.CANCELLED) {
+                booking.setStatus(BookingStatus.CANCELLED);
+                TravelPackage travelPackage = booking.getTravelPackage();
+                if (travelPackage != null && travelPackageRepository != null) {
+                    travelPackage.setAvailableSeats(
+                            travelPackage.getAvailableSeats() + (booking.getNumberOfPeople() != null ? booking.getNumberOfPeople() : 0)
+                    );
+                    travelPackageRepository.save(travelPackage);
+                }
+                bookingRepository.save(booking);
+                log.info("Full refund processed: Cancelled booking {} and restored {} seats for package {}",
+                        booking.getId(), booking.getNumberOfPeople(), travelPackage != null ? travelPackage.getId() : null);
+            }
+        }
+
         log.info("Successfully processed refund {} of ₹{} for payment {} (booking {})",
-                refundId, requestedAmount, paymentId, payment.getBooking().getId());
+                refundId, requestedAmount, paymentId, booking != null ? booking.getId() : null);
 
         return RefundResponseDto.builder()
                 .paymentId(savedPayment.getId())
-                .bookingId(savedPayment.getBooking().getId())
+                .bookingId(booking != null ? booking.getId() : null)
                 .refundId(refundId)
                 .refundAmount(newTotalRefunded)
                 .status(newStatus)
@@ -506,8 +566,10 @@ public class PaymentService {
         dto.setPaymentDate(payment.getPaymentDate());
         dto.setRazorpayOrderId(payment.getRazorpayOrderId());
         dto.setRazorpayPaymentId(payment.getRazorpayPaymentId());
-        dto.setBookingId(payment.getBooking().getId());
-        dto.setCurrency(razorpayConfig.getCurrency());
+        if (payment.getBooking() != null) {
+            dto.setBookingId(payment.getBooking().getId());
+        }
+        dto.setCurrency(razorpayConfig != null ? razorpayConfig.getCurrency() : "INR");
         dto.setRefundId(payment.getRefundId());
         dto.setRefundAmount(payment.getRefundAmount());
         dto.setRefundDate(payment.getRefundDate());
@@ -519,7 +581,7 @@ public class PaymentService {
         AdminPaymentResponseDto dto = new AdminPaymentResponseDto();
         dto.setPaymentId(payment.getId());
         dto.setAmount(payment.getAmount());
-        dto.setCurrency(razorpayConfig.getCurrency());
+        dto.setCurrency(razorpayConfig != null ? razorpayConfig.getCurrency() : "INR");
         dto.setPaymentMethod(payment.getPaymentMethod());
         dto.setStatus(payment.getStatus());
         dto.setPaymentDate(payment.getPaymentDate());
@@ -527,22 +589,29 @@ public class PaymentService {
         dto.setRazorpayPaymentId(payment.getRazorpayPaymentId());
 
         Booking booking = payment.getBooking();
-        dto.setBookingId(booking.getId());
-        dto.setTotalBookingAmount(booking.getTotalAmount());
-        dto.setBookingDate(booking.getBookingDate());
-        dto.setNumberOfPeople(booking.getNumberOfPeople());
+        if (booking != null) {
+            dto.setBookingId(booking.getId());
+            dto.setTotalBookingAmount(booking.getTotalAmount());
+            dto.setBookingDate(booking.getBookingDate());
+            dto.setNumberOfPeople(booking.getNumberOfPeople());
 
-        User user = booking.getUser();
-        dto.setUserId(user.getId());
-        dto.setCustomerName(user.getName());
-        dto.setCustomerEmail(user.getEmail());
+            User user = booking.getUser();
+            if (user != null) {
+                dto.setUserId(user.getId());
+                dto.setCustomerName(user.getName());
+                dto.setCustomerEmail(user.getEmail());
+            } else {
+                dto.setCustomerName("Unknown Customer");
+                dto.setCustomerEmail("N/A");
+            }
 
-        TravelPackage travelPackage = booking.getTravelPackage();
-        if (travelPackage != null) {
-            dto.setTravelPackageId(travelPackage.getId());
-            dto.setTravelPackageName(travelPackage.getTitle());
-            if (travelPackage.getDestination() != null) {
-                dto.setDestinationName(travelPackage.getDestination().getName());
+            TravelPackage travelPackage = booking.getTravelPackage();
+            if (travelPackage != null) {
+                dto.setTravelPackageId(travelPackage.getId());
+                dto.setTravelPackageName(travelPackage.getTitle());
+                if (travelPackage.getDestination() != null) {
+                    dto.setDestinationName(travelPackage.getDestination().getName());
+                }
             }
         }
 

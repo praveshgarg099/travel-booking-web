@@ -2,6 +2,7 @@ package org.telusco.travelbookingweb.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.telusco.travelbookingweb.dto.GoogleLoginRequestDto;
 import org.telusco.travelbookingweb.dto.LoginRequestDTO;
 import org.telusco.travelbookingweb.dto.LoginResponseDTO;
@@ -69,6 +70,7 @@ public class UserService {
     }
 
     // Create user
+    @Transactional(rollbackFor = Exception.class)
     public UserDto createUser(UserDto userDto) {
         String cleanEmail = userDto.getEmail().trim().toLowerCase();
         if (userRepository.findByEmail(cleanEmail).isPresent()) {
@@ -305,6 +307,7 @@ public class UserService {
     }
 
     // Resend Email Verification Code with 60-second cooldown
+    @Transactional(rollbackFor = Exception.class)
     public String resendVerificationCode(String email) {
         if (email == null || email.isBlank()) {
             throw new UserNotFoundException("Email is required");

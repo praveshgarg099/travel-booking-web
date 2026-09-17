@@ -83,7 +83,7 @@ public class GoogleAuthService {
 
             if (idToken == null) {
                 log.error("Google ID token verification failed: token is null, expired, or signature invalid");
-                throw new InvalidCredentialsException("Invalid Google ID token or cryptographic signature verification failed.");
+                throw new InvalidCredentialsException("Google authentication failed. Please try again.");
             }
 
             GoogleIdToken.Payload payload = idToken.getPayload();
@@ -94,16 +94,16 @@ public class GoogleAuthService {
             String pictureUrl = (String) payload.get("picture");
 
             if (googleId == null || googleId.isBlank()) {
-                throw new InvalidCredentialsException("Google ID token does not contain a valid subject/user ID.");
+                throw new InvalidCredentialsException("Google authentication failed. Please try again.");
             }
 
             if (email == null || email.isBlank()) {
-                throw new InvalidCredentialsException("Google ID token does not contain an email address.");
+                throw new InvalidCredentialsException("Google authentication failed. Please try again.");
             }
 
             if (!emailVerified) {
                 log.warn("Rejected Google sign-in: email {} is not verified on Google's platform", email);
-                throw new InvalidCredentialsException("Google email address is not verified by Google.");
+                throw new InvalidCredentialsException("Your Google email could not be verified.");
             }
 
             log.info("Successfully verified Google ID token for email: {}", email);
@@ -112,7 +112,7 @@ public class GoogleAuthService {
             throw e;
         } catch (Exception e) {
             log.error("Error during Google ID token verification: {}", e.getMessage(), e);
-            throw new InvalidCredentialsException("Google authentication failed: " + e.getMessage());
+            throw new InvalidCredentialsException("Google authentication failed. Please try again.");
         }
     }
 }

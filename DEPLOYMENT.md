@@ -55,26 +55,92 @@ graph TD
 | `DB_USERNAME` | Conditional | `<db-user>` | Database username (if not embedded directly in JDBC URL). |
 | `DB_PASSWORD` | Conditional | `<db-password>` | Database password (if not embedded directly in JDBC URL). |
 | `JWT_SECRET` | **YES** | High-entropy string (≥32 chars) | Secret key used to sign and verify HMAC-SHA JWT access tokens. |
-| `FRONTEND_URL` | **YES** | `https://your-frontend-domain.com` | Production frontend HTTPS origin for strict CORS allowlisting (no trailing slash). |
+| `FRONTEND_URL` | **YES** | `https://yatramigo.dev` | Production frontend HTTPS origin for strict CORS allowlisting (no trailing slash). |
+| `GOOGLE_CLIENT_ID` | **YES** | Google OAuth Web Client ID (`...apps.googleusercontent.com`) | Required for cryptographic verification of Google Sign-In ID tokens. |
+| `SPRING_MAIL_HOST` | **YES** | `smtp.resend.com` | Outbound SMTP host (Resend SMTP). |
+| `SPRING_MAIL_PORT` | **YES** | `465` | Outbound SMTP port (465 for SSL). |
+| `SPRING_MAIL_USERNAME` | **YES** | `resend` | Resend SMTP username. |
+| `SPRING_MAIL_PASSWORD` | **YES** | Resend API key | **STRICTLY PRIVATE** Resend API key (`re_...`) configured in Render environment. |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH` | Optional | `true` | Enables SMTP authentication. |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE` | Optional | `true` | Enables SSL encryption on port 465. |
+| `MAIL_FROM` | **YES** | `no-reply@yatramigo.dev` | Verified sender From address configured in Resend. |
 | `RAZORPAY_KEY_ID` | **YES** | `rzp_test_...` or `rzp_live_...` | Razorpay public API key ID (transmitted to checkout clients). |
 | `RAZORPAY_KEY_SECRET` | **YES** | Razorpay secret key | **STRICTLY PRIVATE** server key used for HMAC signature and order APIs. |
 | `RAZORPAY_WEBHOOK_SECRET` | Optional | Webhook secret | **STRICTLY PRIVATE** secret configured in Razorpay dashboard for webhook signing. |
-| `GOOGLE_CLIENT_ID` | Conditional | Google OAuth client ID | Required for verifying Google Sign-In ID tokens. |
-| `SPRING_MAIL_HOST` | **YES** | `smtp.gmail.com` | Outbound SMTP host. |
-| `SPRING_MAIL_PORT` | **YES** | `587` | Outbound SMTP port (587 for STARTTLS, 465 for SSL). |
-| `SPRING_MAIL_USERNAME` | **YES** | `sender@gmail.com` | Authenticated SMTP account username. |
-| `SPRING_MAIL_PASSWORD` | **YES** | 16-char app password | **STRICTLY PRIVATE** SMTP account password or Google App Password. |
-| `MAIL_FROM` | Optional | `sender@gmail.com` | Sender From address (must match SMTP account or verified domain). |
 
 > [!CAUTION]
 > **CRITICAL SECRET HYGIENE**:
 > `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `SPRING_MAIL_PASSWORD`, `JWT_SECRET`, and `DB_PASSWORD` must NEVER be committed to Git, logged to consoles, or bundled into frontend assets.
 
-### Frontend Environment Variables (`frontend/.env.example`)
+### Frontend Environment Variables (`frontend/.env.example` / Vercel)
 
 | Variable Name | Required | Example | Description |
 |---|---|---|---|
-| `VITE_API_BASE_URL` | **YES** in Prod | `https://your-backend-api.onrender.com` | Public HTTPS URL of the backend API (without trailing slash). |
+| `VITE_API_BASE_URL` | **YES** in Prod | `https://travel-booking-web-i3a0.onrender.com` | Public HTTPS URL of the backend API (without trailing slash). |
+| `VITE_GOOGLE_CLIENT_ID` | **YES** in Prod | `<same-google-client-id>.apps.googleusercontent.com` | Google OAuth2 Web Client ID for Google Identity Services. |
+
+---
+
+## 2.1 Production Authentication Architecture
+
+### 1. Local Email / Password Authentication
+- **Registration**:
+  - Name, normalized lowercase email, and password submitted to `/api/users/register`.
+  - Password hashed using BCrypt (`BCryptPasswordEncoder`). Plaintext passwords are never stored or logged.
+  - Generates a secure, cryptographically random 6-digit OTP code (`SecureRandom`).
+  - Stores BCrypt-hashed OTP in database with a 15-minute expiration timestamp (`verificationCodeExpiresAt`).
+  - Sets `emailVerified=false` and `verificationAttempts=0`.
+  - Dispatches OTP to user's email via Resend SMTP (`smtp.resend.com:465` SSL).
+  - Enforces `@Transactional(rollbackFor = Exception.class)`: If Resend SMTP delivery fails, the transaction rolls back cleanly, returning HTTP 503 so no orphaned or unverified users remain without an email.
+- **Verification**:
+  - Submits email and 6-digit OTP to `/api/users/verify-email`.
+  - Enforces brute-force defense: Maximum 5 failed attempts per OTP code. Exceeding 5 attempts immediately destroys the OTP code, requiring a new code request.
+  - Upon valid verification, immediately invalidates the OTP code, clears expiration, marks `emailVerified=true`, and issues an application JWT access token.
+- **Resend OTP Cooldown**:
+  - Endpoint `/api/users/resend-verification-code` enforces a mandatory 60-second cooldown between resend requests to prevent inbox flooding and spam.
+- **Local Login**:
+  - Requires matching BCrypt password and explicitly requires `emailVerified=true`.
+  - Unverified accounts receive HTTP 403 Forbidden with a clear prompt to complete email verification at `/verify-email`.
+
+### 2. Real Google Identity Services (GIS) Authentication
+- **Client Flow**:
+  - The official Google Identity Services (GIS) button (`window.google.accounts.id`) is rendered on both `/login` and `/register`.
+  - The client displays Google's authentic account chooser UI.
+  - Upon user account selection, Google issues a signed cryptographic Google ID Token (JWT).
+- **Backend Cryptographic Verification**:
+  - ID Token is posted to `/api/users/google-login`.
+  - Verified server-side by `GoogleAuthService` using `com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier`.
+  - Validates cryptographic signature, Google issuer (`accounts.google.com` or `https://accounts.google.com`), audience (`GOOGLE_CLIENT_ID`), and expiration.
+  - Validates `emailVerified=true` from Google's payload. Tokens with unverified Google emails are strictly rejected.
+- **Account Linking & Duplicate Prevention**:
+  - Searches database first by `googleId`, then by normalized email.
+  - If an existing account with the same email exists (e.g. created via email/password), the Google identity is linked:
+    - User ID is preserved.
+    - Role (`ADMIN` or `USER`) is preserved.
+    - Existing bookings, reviews, and payments remain intact.
+    - Sets `googleId` and ensures `emailVerified=true`.
+  - If no account exists, a new account is created with `authProvider="GOOGLE"`, `emailVerified=true`, a secure unguessable random password, and a welcome email is sent.
+  - Zero duplicate accounts are created.
+- **Application JWT Issuance**:
+  - Google ID token is never used as the session token.
+  - Once verified, Yatramigo issues its own signed HMAC-SHA JWT token. Both local and Google users share the exact same `AuthContext` state.
+- **Production Simulation Elimination**:
+  - Simulated tokens (`test_google_token_*`) are strictly rejected with an exception whenever `SPRING_PROFILES_ACTIVE=prod` or `app.auth.allow-simulation=false`.
+  - No bypass branches exist in production.
+
+### 3. Google Cloud Console Configuration Checklist
+1. Open [Google Cloud Console -> APIs & Services -> Credentials](https://console.cloud.google.com/apis/credentials).
+2. Select or create an OAuth 2.0 Client ID of type **Web application**.
+3. Under **Authorized JavaScript origins**, configure:
+   - `https://yatramigo.dev` (Production custom domain)
+   - `https://travel-booking-web-*.vercel.app` (Vercel preview/production deployments)
+   - `http://localhost:5173` (Local frontend development)
+4. Under **Authorized redirect URIs**, configure:
+   - `https://yatramigo.dev`
+   - `http://localhost:5173`
+5. Copy the Client ID:
+   - Set in Render: `GOOGLE_CLIENT_ID=<client-id>.apps.googleusercontent.com`
+   - Set in Vercel: `VITE_GOOGLE_CLIENT_ID=<client-id>.apps.googleusercontent.com`
 
 ---
 
@@ -135,6 +201,14 @@ spring.jpa.hibernate.ddl-auto=update
    - `RAZORPAY_KEY_ID`: `rzp_test_...` (start with Test keys)
    - `RAZORPAY_KEY_SECRET`: `<your-razorpay-test-secret>`
    - `RAZORPAY_WEBHOOK_SECRET`: `<your-razorpay-webhook-secret>`
+   - `GOOGLE_CLIENT_ID`: `<google-oauth-client-id>`
+   - `SPRING_MAIL_HOST`: `smtp.resend.com`
+   - `SPRING_MAIL_PORT`: `465`
+   - `SPRING_MAIL_USERNAME`: `resend`
+   - `SPRING_MAIL_PASSWORD`: `<your-resend-api-key-from-render-dashboard>`
+   - `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH`: `true`
+   - `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE`: `true`
+   - `MAIL_FROM`: `no-reply@yatramigo.dev`
 
 4. **Health Check Path**:
    - Path: `/api/travel-packages` (public read endpoint).

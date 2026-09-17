@@ -1,13 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
-import { Compass, User, Mail, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Compass, User, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react'
 
 export const Register = () => {
-  const { login } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -19,6 +19,14 @@ export const Register = () => {
   })
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Redirect already authenticated users to dashboard or admin
+  useEffect(() => {
+    if (isAuthenticated) {
+      const dest = user?.role === 'ADMIN' ? '/admin' : '/dashboard'
+      navigate(dest, { replace: true })
+    }
+  }, [isAuthenticated, user, navigate])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -55,9 +63,9 @@ export const Register = () => {
       await authService.register(registerPayload)
       toast.success('Account created! A 6-digit verification code has been dispatched.')
 
-      // Redirect user to VerifyEmail page
+      // Redirect user to VerifyEmail page with fromRegister flag
       navigate('/verify-email', {
-        state: { email: formData.email.trim() },
+        state: { email: formData.email.trim(), fromRegister: true },
         replace: true,
       })
     } catch (err) {
@@ -99,9 +107,9 @@ export const Register = () => {
           >
             <Compass size={26} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Join Yatramigo</h1>
+          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Create your Yatramigo account</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
-            Create an account to book tours, manage reservations, and leave verified reviews.
+            Sign up to book tours, manage reservations, and leave verified reviews.
           </p>
         </div>
 
@@ -127,9 +135,10 @@ export const Register = () => {
 
         {/* Google OAuth Sign-Up */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <GoogleSignInButton text="Sign up with Google" />
+          <GoogleSignInButton text="Continue with Google" />
         </div>
 
+        {/* Divider matching Section 1 wireframe */}
         <div
           style={{
             display: 'flex',
@@ -138,11 +147,11 @@ export const Register = () => {
             color: 'var(--text-secondary)',
             fontSize: '0.8rem',
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            letterSpacing: '0.08em',
           }}
         >
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-          <span style={{ padding: '0 0.75rem', fontWeight: 600 }}>or sign up with email</span>
+          <span style={{ padding: '0 0.75rem', fontWeight: 600, color: 'var(--slate-400)' }}>OR</span>
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
         </div>
 
@@ -150,7 +159,7 @@ export const Register = () => {
           {/* Full Name */}
           <div className="form-group">
             <label className="form-label" htmlFor="registerName">
-              Full Name *
+              Full Name
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -174,10 +183,10 @@ export const Register = () => {
             </div>
           </div>
 
-          {/* Email Address */}
+          {/* Email */}
           <div className="form-group">
             <label className="form-label" htmlFor="registerEmail">
-              Email Address *
+              Email
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -204,7 +213,7 @@ export const Register = () => {
           {/* Password */}
           <div className="form-group">
             <label className="form-label" htmlFor="registerPassword">
-              Password *
+              Password
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -231,7 +240,7 @@ export const Register = () => {
           {/* Confirm Password */}
           <div className="form-group">
             <label className="form-label" htmlFor="confirmPassword">
-              Confirm Password *
+              Confirm Password
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -255,11 +264,12 @@ export const Register = () => {
             </div>
           </div>
 
+          {/* Submit Button */}
           <button
             type="submit"
             className="btn btn-primary btn-block btn-lg"
             disabled={loading}
-            style={{ marginTop: '1rem' }}
+            style={{ marginTop: '1.25rem' }}
           >
             {loading ? (
               'Creating Account...'
@@ -284,7 +294,7 @@ export const Register = () => {
         >
           Already have an account?{' '}
           <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-            Sign In
+            Login
           </Link>
         </div>
       </div>

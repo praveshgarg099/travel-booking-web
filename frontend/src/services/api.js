@@ -62,6 +62,9 @@ api.interceptors.response.use(
       case 500:
         userMessage = serverMessage || 'Something went wrong. Please try again.'
         break
+      case 503:
+        userMessage = serverMessage || 'Service is temporarily unavailable. Please try again later.'
+        break
       default:
         userMessage = serverMessage || error.message || 'A network error occurred. Please try again.'
     }

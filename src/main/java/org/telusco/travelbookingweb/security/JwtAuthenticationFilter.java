@@ -52,14 +52,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String email = jwtService.extractEmail(token);
+        String cleanEmail = email != null ? email.trim().toLowerCase() : "";
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(cleanEmail)
                 .orElseThrow(() ->
                         new RuntimeException("User not found"));
 
-        System.out.println("USER EMAIL = " + user.getEmail());
-        System.out.println("USER ROLE = " + user.getRole());
-        System.out.println("AUTHORITY = ROLE_" + user.getRole().name());
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         user,

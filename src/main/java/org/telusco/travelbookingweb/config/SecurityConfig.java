@@ -95,9 +95,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
 
-                        // Travel Package - GET allowed publicly for browsing
+                        // Travel Package - GET and HEAD allowed publicly for browsing & health checks
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/travel-packages",
+                                "/api/travel-packages/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.HEAD,
+                                "/api/travel-packages",
                                 "/api/travel-packages/**"
                         ).permitAll()
 
@@ -120,6 +126,7 @@ public class SecurityConfig {
                         // Destination - GET allowed publicly
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/destinations",
                                 "/api/destinations/**"
                         ).permitAll()
 
@@ -142,6 +149,7 @@ public class SecurityConfig {
                         // Reviews - GET allowed publicly
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/reviews",
                                 "/api/reviews/**"
                         ).permitAll()
 

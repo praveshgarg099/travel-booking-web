@@ -391,8 +391,62 @@ class EmailVerificationAndGoogleAuthTest {
         InvalidCredentialsException ex = assertThrows(InvalidCredentialsException.class,
                 () -> userService.loginWithGoogle(req));
 
-        assertTrue(ex.getMessage().contains("Google email address is not verified"));
+        assertTrue(ex.getMessage().contains("Your Google email could not be verified"));
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle links Google ID to existing ADMIN user and preserves ADMIN role and original ID")
+    void testLoginWithGoogle_ExistingAdminUser_PreservesAdminRoleAndId() {
+        User adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setName("Platform Admin");
+        adminUser.setEmail("admin@yatramigo.dev");
+        adminUser.setRole(Role.ADMIN);
+        adminUser.setEmailVerified(true);
+        adminUser.setAuthProvider("LOCAL");
+
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_admin_sub_999", "admin@yatramigo.dev", "Platform Admin", null, true
+        );
+        when(googleAuthService.verifyToken("valid_admin_google_token")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_admin_sub_999")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("admin@yatramigo.dev")).thenReturn(Optional.of(adminUser));
+        when(userRepository.save(adminUser)).thenReturn(adminUser);
+        when(jwtService.generateToken("admin@yatramigo.dev", "ADMIN")).thenReturn("admin.jwt.token");
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("valid_admin_google_token");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals(1L, res.getId(), "Original user ID must be preserved");
+        assertEquals("ADMIN", res.getRole(), "ADMIN role must be preserved upon Google account linking");
+        assertEquals("admin.jwt.token", res.getToken());
+        assertEquals("goog_admin_sub_999", adminUser.getGoogleId());
+        assertTrue(adminUser.getEmailVerified());
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle with existing Google ID avoids duplicate user creation and issues JWT")
+    void testLoginWithGoogle_ExistingGoogleId_NoDuplicateCreated() {
+        testUser.setGoogleId("goog_existing_sub_888");
+        testUser.setEmailVerified(true);
+
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_existing_sub_888", "kavita@example.com", "Kavita Patel", null, true
+        );
+        when(googleAuthService.verifyToken("valid_google_token")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_existing_sub_888")).thenReturn(Optional.of(testUser));
+        when(userRepository.save(testUser)).thenReturn(testUser);
+        when(jwtService.generateToken("kavita@example.com", "USER")).thenReturn("existing.google.jwt");
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("valid_google_token");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals(testUser.getId(), res.getId());
+        assertEquals("existing.google.jwt", res.getToken());
+        verify(userRepository, never()).findByEmail(anyString());
     }
 
     // =========================================================================
@@ -450,5 +504,46 @@ class EmailVerificationAndGoogleAuthTest {
                 () -> authService.verifyToken("real_jwt_token_payload_without_client_id"));
 
         assertTrue(ex.getMessage().contains("Google authentication is not properly configured"));
+    }
+
+    @Test
+    @DisplayName("GoogleAuthService rejects null or blank tokens")
+    void testGoogleAuthService_NullOrBlankToken_ThrowsException() {
+        GoogleAuthService authService = new GoogleAuthService(environment);
+        assertThrows(InvalidCredentialsException.class, () -> authService.verifyToken(null));
+        assertThrows(InvalidCredentialsException.class, () -> authService.verifyToken("   "));
+    }
+
+    @Test
+    @DisplayName("GoogleAuthService rejects malformed token with signature verification failure")
+    void testGoogleAuthService_MalformedToken_ThrowsException() {
+        GoogleAuthService authService = new GoogleAuthService(environment);
+        ReflectionTestUtils.setField(authService, "allowSimulation", false);
+        ReflectionTestUtils.setField(authService, "configuredClientId", "test-client-id.apps.googleusercontent.com");
+
+        assertThrows(InvalidCredentialsException.class,
+                () -> authService.verifyToken("eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.invalidSignature"));
+    }
+
+    @Test
+    @DisplayName("createUser method declares @Transactional(rollbackFor = Exception.class) for atomic registration rollback")
+    void testCreateUser_TransactionalRollbackConfigured() throws NoSuchMethodException {
+        var method = UserService.class.getMethod("createUser", UserDto.class);
+        var transactional = method.getAnnotation(org.springframework.transaction.annotation.Transactional.class);
+        assertNotNull(transactional, "createUser must be annotated with @Transactional");
+        assertEquals(Exception.class, transactional.rollbackFor()[0], "rollbackFor must be Exception.class");
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler maps EmailDeliveryException to HTTP 503 with safe user message")
+    void testGlobalExceptionHandler_EmailDeliveryException_Returns503() {
+        org.telusco.travelbookingweb.exception.GlobalExceptionHandler handler =
+                new org.telusco.travelbookingweb.exception.GlobalExceptionHandler();
+        var ex = new org.telusco.travelbookingweb.exception.EmailDeliveryException("Internal SMTP host connection timed out");
+        var response = handler.handleEmailDeliveryException(ex);
+
+        assertNotNull(response);
+        assertEquals(503, response.getStatus());
+        assertEquals("Unable to send verification email. Please try again later.", response.getMessage());
     }
 }

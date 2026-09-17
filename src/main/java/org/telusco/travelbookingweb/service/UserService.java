@@ -157,9 +157,9 @@ public class UserService {
                         new UserNotFoundException("User not found")
                 );
 
-        // Check whether another user already has this email
+        String cleanEmail = userDto.getEmail() != null ? userDto.getEmail().trim().toLowerCase() : "";
         Optional<User> userWithSameEmail =
-                userRepository.findByEmail(userDto.getEmail());
+                userRepository.findByEmail(cleanEmail);
 
         if (userWithSameEmail.isPresent()
                 && !userWithSameEmail.get().getId().equals(id)) {
@@ -169,8 +169,8 @@ public class UserService {
             );
         }
 
-        existingUser.setName(userDto.getName());
-        existingUser.setEmail(userDto.getEmail());
+        existingUser.setName(userDto.getName() != null ? userDto.getName().trim() : existingUser.getName());
+        existingUser.setEmail(cleanEmail);
 
         User savedUser = userRepository.save(existingUser);
 
@@ -348,7 +348,7 @@ public class UserService {
 
         // Defense: Google email must be verified on Google
         if (!googleUser.emailVerified()) {
-            throw new InvalidCredentialsException("Google email address is not verified by Google.");
+            throw new InvalidCredentialsException("Your Google email could not be verified.");
         }
 
         String email = googleUser.email().trim().toLowerCase();

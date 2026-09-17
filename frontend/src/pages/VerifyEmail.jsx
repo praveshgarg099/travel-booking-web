@@ -6,7 +6,7 @@ import { authService } from '../services/authService'
 import { MailCheck, ArrowRight, RefreshCw, AlertCircle, ShieldCheck, Mail } from 'lucide-react'
 
 export const VerifyEmail = () => {
-  const { completeVerification } = useAuth()
+  const { user: currentUser, isAuthenticated, completeVerification } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -22,7 +22,8 @@ export const VerifyEmail = () => {
 
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
-  const [resendCooldown, setResendCooldown] = useState(60)
+  // If user just arrived from register, initial 60s cooldown applies
+  const [resendCooldown, setResendCooldown] = useState(location.state?.fromRegister ? 60 : 0)
   const [errorMsg, setErrorMsg] = useState('')
 
   // Resend cooldown timer
@@ -68,8 +69,14 @@ export const VerifyEmail = () => {
   }
 
   const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !codeDigits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
+    if (e.key === 'Backspace') {
+      if (!codeDigits[index] && index > 0) {
+        // If current box is empty, delete previous and move back
+        const newDigits = [...codeDigits]
+        newDigits[index - 1] = ''
+        setCodeDigits(newDigits)
+        inputRefs.current[index - 1]?.focus()
+      }
     }
   }
 
@@ -110,7 +117,8 @@ export const VerifyEmail = () => {
       })
 
       toast.success(`Email verified successfully! Welcome, ${user.name}!`)
-      navigate('/dashboard', { replace: true })
+      const dest = location.state?.from?.pathname || (user.role === 'ADMIN' ? '/admin' : '/dashboard')
+      navigate(dest, { replace: true })
     } catch (err) {
       console.error('Verification error:', err)
       setErrorMsg(err.message || 'Verification failed. Please ensure the code is correct.')
@@ -129,18 +137,70 @@ export const VerifyEmail = () => {
     try {
       setResending(true)
       setErrorMsg('')
-      await authService.resendVerification(email.trim())
+      const response = await authService.resendVerification(email.trim())
+      if (typeof response === 'string' && response.toLowerCase().includes('already verified')) {
+        toast.info(response)
+        navigate('/login', { replace: true })
+        return
+      }
       toast.success('A new 6-digit verification code has been dispatched!')
       setResendCooldown(60)
       setCodeDigits(['', '', '', '', '', ''])
       inputRefs.current[0]?.focus()
     } catch (err) {
       console.error('Resend error:', err)
-      setErrorMsg(err.message || 'Failed to resend code. Please try again.')
-      toast.error(err.message || 'Failed to resend verification code.')
+      const msg = err.message || 'Failed to resend verification code.'
+      setErrorMsg(msg)
+      toast.error(msg)
+      // Check if server response specified remaining cooldown seconds
+      const match = msg.match(/wait (\d+) seconds/i)
+      if (match) {
+        setResendCooldown(parseInt(match[1], 10))
+      }
+      // If resend failed for other reasons (e.g. SMTP 503, invalid email), do NOT start cooldown!
     } finally {
       setResending(false)
     }
+  }
+
+  if (isAuthenticated && currentUser?.emailVerified) {
+    return (
+      <div
+        style={{
+          backgroundColor: 'var(--bg-main)',
+          minHeight: '80vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '3rem 1.5rem',
+        }}
+      >
+        <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem 2rem', textAlign: 'center', boxShadow: 'var(--shadow-xl)' }}>
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'var(--white)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem',
+            }}
+          >
+            <ShieldCheck size={32} />
+          </div>
+          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Already Verified</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: '0.75rem 0 1.5rem' }}>
+            Your Yatramigo account ({currentUser.email}) is already verified and ready to use.
+          </p>
+          <Link to={currentUser.role === 'ADMIN' ? '/admin' : '/dashboard'} className="btn btn-primary btn-block btn-lg">
+            Go to {currentUser.role === 'ADMIN' ? 'Admin Portal' : 'Dashboard'}
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

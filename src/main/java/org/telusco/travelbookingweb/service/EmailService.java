@@ -1,5 +1,6 @@
 package org.telusco.travelbookingweb.service;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
@@ -25,14 +26,17 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final Environment environment;
 
-    @Value("${MAIL_FROM:${mail.from.address:}}")
+    @Value("${MAIL_FROM:${mail.from.address:no-reply@yatramigo.dev}}")
     private String configuredFromAddress;
 
     @Value("${mail.from.name:Yatramigo}")
     private String fromName;
 
-    @Value("${spring.mail.username:}")
+    @Value("${spring.mail.username:resend}")
     private String mailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
 
     @Value("${app.email.dev-otp-logging:false}")
     private boolean devOtpLogging;
@@ -42,29 +46,46 @@ public class EmailService {
         this.environment = environment;
     }
 
+    @PostConstruct
+    public void init() {
+        if (isProductionEnvironment()) {
+            if (!isMailConfigured()) {
+                log.warn("================================================================================");
+                log.warn(" [PRODUCTION NOTICE] Outbound SMTP credentials are not configured.");
+                log.warn(" User registration requiring email verification will fail safely with HTTP 503");
+                log.warn(" until SPRING_MAIL_USERNAME and SPRING_MAIL_PASSWORD are set in the environment.");
+                log.warn(" Required variables: SPRING_MAIL_USERNAME, SPRING_MAIL_PASSWORD");
+                log.warn(" Optional variables: SPRING_MAIL_HOST, SPRING_MAIL_PORT, MAIL_FROM");
+                log.warn("================================================================================");
+            } else {
+                log.info("Production Resend SMTP email service is configured.");
+            }
+        }
+    }
+
     public boolean isProductionEnvironment() {
         return environment != null && environment.acceptsProfiles(Profiles.of("prod", "production"));
     }
 
     public boolean isMailConfigured() {
-        return mailSender != null && mailUsername != null && !mailUsername.trim().isEmpty();
+        return mailSender != null
+                && mailUsername != null && !mailUsername.trim().isEmpty()
+                && mailPassword != null && !mailPassword.trim().isEmpty();
     }
 
     /**
-     * Resolves an effective sender address that is strictly compatible with the authenticated SMTP account.
-     * If MAIL_FROM is explicitly set to a custom verified address, it is used.
-     * Otherwise, if using authenticated SMTP (e.g. Gmail), it defaults to spring.mail.username to avoid
-     * '553 Sender address rejected' errors.
+     * Resolves an effective sender address.
+     * Uses MAIL_FROM / mail.from.address if configured (e.g. no-reply@yatramigo.dev).
+     * Otherwise defaults to mailUsername if it contains an email address, or "no-reply@yatramigo.dev".
      */
     public String getEffectiveFromAddress() {
-        if (configuredFromAddress != null && !configuredFromAddress.trim().isEmpty()
-                && !configuredFromAddress.contains("yatramigo.dev")) {
+        if (configuredFromAddress != null && !configuredFromAddress.trim().isEmpty()) {
             return configuredFromAddress.trim();
         }
-        if (mailUsername != null && !mailUsername.trim().isEmpty()) {
+        if (mailUsername != null && mailUsername.contains("@")) {
             return mailUsername.trim();
         }
-        return "no-reply@yatramigo.com";
+        return "no-reply@yatramigo.dev";
     }
 
     /**

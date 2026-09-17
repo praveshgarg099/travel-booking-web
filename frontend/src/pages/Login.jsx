@@ -1,17 +1,15 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
-import { Compass, Mail, Lock, ArrowRight, AlertCircle, ShieldCheck, MailCheck } from 'lucide-react'
+import { Compass, Mail, Lock, ArrowRight, AlertCircle, MailCheck, HelpCircle, X } from 'lucide-react'
 
 export const Login = () => {
-  const { login } = useAuth()
+  const { user, isAuthenticated, login } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
-
-  const from = location.state?.from?.pathname || '/dashboard'
 
   const [formData, setFormData] = useState({
     email: '',
@@ -20,6 +18,15 @@ export const Login = () => {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [needsVerification, setNeedsVerification] = useState(false)
+  const [showForgotModal, setShowForgotModal] = useState(false)
+
+  // Redirect already authenticated users to dashboard or target route
+  useEffect(() => {
+    if (isAuthenticated) {
+      const dest = location.state?.from?.pathname || (user?.role === 'ADMIN' ? '/admin' : '/dashboard')
+      navigate(dest, { replace: true })
+    }
+  }, [isAuthenticated, user, navigate, location.state])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -38,13 +45,13 @@ export const Login = () => {
 
     try {
       setLoading(true)
-      const user = await login({
+      const loggedInUser = await login({
         email: formData.email.trim(),
         password: formData.password,
       })
 
-      toast.success(`Welcome back, ${user.name}!`)
-      const dest = location.state?.from?.pathname || (user.role === 'ADMIN' ? '/admin' : '/dashboard')
+      toast.success(`Welcome back, ${loggedInUser.name}!`)
+      const dest = location.state?.from?.pathname || (loggedInUser.role === 'ADMIN' ? '/admin' : '/dashboard')
       navigate(dest, { replace: true })
     } catch (err) {
       console.error('Login error:', err)
@@ -93,7 +100,7 @@ export const Login = () => {
           >
             <Compass size={26} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Sign In to Yatramigo</h1>
+          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Welcome back to Yatramigo</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
             Access your travel bookings, receipts, and reviews.
           </p>
@@ -151,9 +158,10 @@ export const Login = () => {
 
         {/* Google OAuth Sign-In */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <GoogleSignInButton text="Sign in with Google" />
+          <GoogleSignInButton text="Continue with Google" />
         </div>
 
+        {/* Divider matching Section 1 wireframe */}
         <div
           style={{
             display: 'flex',
@@ -162,11 +170,11 @@ export const Login = () => {
             color: 'var(--text-secondary)',
             fontSize: '0.8rem',
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            letterSpacing: '0.08em',
           }}
         >
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-          <span style={{ padding: '0 0.75rem', fontWeight: 600 }}>or sign in with email</span>
+          <span style={{ padding: '0 0.75rem', fontWeight: 600, color: 'var(--slate-400)' }}>OR</span>
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
         </div>
 
@@ -174,7 +182,7 @@ export const Login = () => {
           {/* Email Field */}
           <div className="form-group">
             <label className="form-label" htmlFor="loginEmail">
-              Email Address
+              Email
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -225,21 +233,41 @@ export const Login = () => {
             </div>
           </div>
 
+          {/* Submit Button */}
           <button
             type="submit"
             className="btn btn-primary btn-block btn-lg"
             disabled={loading}
-            style={{ marginTop: '1rem' }}
+            style={{ marginTop: '1.25rem' }}
           >
             {loading ? (
               'Authenticating...'
             ) : (
               <>
-                <span>Sign In</span>
+                <span>Login</span>
                 <ArrowRight size={16} />
               </>
             )}
           </button>
+
+          {/* Forgot Password Link */}
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary)',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                padding: '0.25rem 0.5rem',
+              }}
+            >
+              Forgot password?
+            </button>
+          </div>
         </form>
 
         <div
@@ -252,12 +280,93 @@ export const Login = () => {
             color: 'var(--text-secondary)',
           }}
         >
-          Don't have an account yet?{' '}
+          Don't have an account?{' '}
           <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-            Create Account
+            Create account
           </Link>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1.5rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '420px',
+              width: '100%',
+              padding: '2rem',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-2xl)',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={() => setShowForgotModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--slate-400)',
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--primary-light)',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <HelpCircle size={20} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--slate-900)' }}>Forgot Password?</h3>
+            </div>
+
+            <p style={{ fontSize: '0.9rem', color: 'var(--slate-600)', lineHeight: 1.5, marginBottom: '1rem' }}>
+              If your account was created with Google, you can sign in directly using <strong>Continue with Google</strong>.
+            </p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--slate-600)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+              For email and password accounts, please contact our support desk at{' '}
+              <a href="mailto:support@yatramigo.dev" style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                support@yatramigo.dev
+              </a>{' '}
+              for secure credential recovery.
+            </p>
+
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              onClick={() => setShowForgotModal(false)}
+            >
+              Got It
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

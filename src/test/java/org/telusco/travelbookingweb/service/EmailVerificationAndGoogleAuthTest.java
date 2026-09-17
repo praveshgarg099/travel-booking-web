@@ -449,6 +449,221 @@ class EmailVerificationAndGoogleAuthTest {
         verify(userRepository, never()).findByEmail(anyString());
     }
 
+    @Test
+    @DisplayName("loginWithGoogle sets verified Google name for new user")
+    void testLoginWithGoogle_NewUser_SetsVerifiedGoogleName() {
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_pravesh_1", "pravesh.new@example.com", "Pravesh Garg", null, true
+        );
+        when(googleAuthService.verifyToken("token_pravesh")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_pravesh_1")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("pravesh.new@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed_pass");
+        when(jwtService.generateToken("pravesh.new@example.com", "USER")).thenReturn("jwt_pravesh");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(101L);
+            return u;
+        });
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("token_pravesh");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals("Pravesh Garg", res.getName(), "Response name must be verified Google name");
+        assertEquals("pravesh.new@example.com", res.getEmail());
+        verify(emailService).sendWelcomeEmail("pravesh.new@example.com", "Pravesh Garg");
+    }
+
+    @Test
+    @DisplayName("resolveGoogleDisplayName handles name, fallback to given+family name, and safe default")
+    void testGoogleDisplayNameResolution_AllScenarios() {
+        // 1. Direct name claim present
+        assertEquals("Pravesh Garg", GoogleAuthService.resolveGoogleDisplayName("Pravesh Garg", "Pravesh", "Garg"));
+
+        // 2. Name claim is null -> fall back to given + family name
+        assertEquals("Pravesh Garg", GoogleAuthService.resolveGoogleDisplayName(null, "Pravesh", "Garg"));
+
+        // 3. Name claim is blank -> fall back to given + family name
+        assertEquals("Pravesh Garg", GoogleAuthService.resolveGoogleDisplayName("   ", "Pravesh", "Garg"));
+
+        // 4. Only given_name present
+        assertEquals("Pravesh", GoogleAuthService.resolveGoogleDisplayName(null, "Pravesh", null));
+
+        // 5. Only family_name present
+        assertEquals("Garg", GoogleAuthService.resolveGoogleDisplayName(null, null, "Garg"));
+
+        // 6. All claims missing -> safe fallback
+        assertEquals("Google Traveler", GoogleAuthService.resolveGoogleDisplayName(null, null, null));
+        assertEquals("Google Traveler", GoogleAuthService.resolveGoogleDisplayName("  ", "  ", "  "));
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle preserves existing meaningful user name upon Google account linking")
+    void testLoginWithGoogle_ExistingUser_PreservesMeaningfulCustomName() {
+        User existingUser = new User();
+        existingUser.setId(55L);
+        existingUser.setName("Pravesh Garg");
+        existingUser.setEmail("pravesh@custom.com");
+        existingUser.setRole(Role.USER);
+        existingUser.setEmailVerified(true);
+
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_custom_55", "pravesh@custom.com", "Different Google Name", null, true
+        );
+        when(googleAuthService.verifyToken("valid_token")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_custom_55")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("pravesh@custom.com")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser)).thenReturn(existingUser);
+        when(jwtService.generateToken("pravesh@custom.com", "USER")).thenReturn("jwt_existing");
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("valid_token");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals(55L, res.getId());
+        assertEquals("Pravesh Garg", res.getName(), "Existing custom name must NOT be overwritten");
+        assertEquals("Pravesh Garg", existingUser.getName());
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle replaces generic 'Google Traveler' placeholder with verified Google name")
+    void testLoginWithGoogle_ExistingUser_ReplacesGoogleTravelerPlaceholderWithVerifiedName() {
+        User existingUser = new User();
+        existingUser.setId(19L);
+        existingUser.setName("Google Traveler");
+        existingUser.setEmail("pravesh.10022004@gmail.com");
+        existingUser.setRole(Role.USER);
+        existingUser.setEmailVerified(true);
+        existingUser.setGoogleId("goog_sub_55125441");
+
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_sub_55125441", "pravesh.10022004@gmail.com", "Pravesh Garg", null, true
+        );
+        when(googleAuthService.verifyToken("valid_pravesh_token")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_sub_55125441")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser)).thenReturn(existingUser);
+        when(jwtService.generateToken("pravesh.10022004@gmail.com", "USER")).thenReturn("jwt_token_19");
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("valid_pravesh_token");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals(19L, res.getId(), "User ID must be preserved");
+        assertEquals("Pravesh Garg", res.getName(), "Generic placeholder 'Google Traveler' must be replaced with verified Google name");
+        assertEquals("Pravesh Garg", existingUser.getName());
+        assertEquals("USER", res.getRole());
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle replaces null or blank name on existing user with verified Google name")
+    void testLoginWithGoogle_ExistingUser_ReplacesNullOrBlankNameWithVerifiedName() {
+        User existingUser = new User();
+        existingUser.setId(22L);
+        existingUser.setName(null);
+        existingUser.setEmail("traveler.blank@example.com");
+        existingUser.setRole(Role.USER);
+        existingUser.setEmailVerified(true);
+
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_blank_22", "traveler.blank@example.com", "Pravesh Garg", null, true
+        );
+        when(googleAuthService.verifyToken("valid_token")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_blank_22")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("traveler.blank@example.com")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser)).thenReturn(existingUser);
+        when(jwtService.generateToken("traveler.blank@example.com", "USER")).thenReturn("jwt_22");
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("valid_token");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals("Pravesh Garg", res.getName());
+        assertEquals("Pravesh Garg", existingUser.getName());
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle sets fallback name from given and family name for new user when full name claim is missing")
+    void testLoginWithGoogle_NewUser_FallbackGivenAndFamilyName() {
+        String fallbackName = GoogleAuthService.resolveGoogleDisplayName(null, "Pravesh", "Garg");
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_pravesh_fallback", "pravesh.fallback@example.com", fallbackName, null, true
+        );
+        when(googleAuthService.verifyToken("token_fallback")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_pravesh_fallback")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("pravesh.fallback@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed_pass");
+        when(jwtService.generateToken("pravesh.fallback@example.com", "USER")).thenReturn("jwt_fallback");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(102L);
+            return u;
+        });
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("token_fallback");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals("Pravesh Garg", res.getName(), "Name resolved from given_name + family_name must be used");
+        assertEquals("pravesh.fallback@example.com", res.getEmail());
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle safely falls back to 'Google Traveler' when all name fields are missing")
+    void testLoginWithGoogle_NewUser_AllNameFieldsMissing_FallsBackToGoogleTraveler() {
+        String fallbackName = GoogleAuthService.resolveGoogleDisplayName(null, null, null);
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_noname", "noname@example.com", fallbackName, null, true
+        );
+        when(googleAuthService.verifyToken("token_noname")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_noname")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("noname@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed_pass");
+        when(jwtService.generateToken("noname@example.com", "USER")).thenReturn("jwt_noname");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(103L);
+            return u;
+        });
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("token_noname");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals("Google Traveler", res.getName(), "Should fall back to 'Google Traveler' only when all claims are absent");
+    }
+
+    @Test
+    @DisplayName("loginWithGoogle linking preserves user ID, role, password, and existing relationships")
+    void testLoginWithGoogle_ExistingUser_PreservesAllCoreAttributes() {
+        User existingUser = new User();
+        existingUser.setId(77L);
+        existingUser.setName("Google Traveler");
+        existingUser.setEmail("existing.traveler@example.com");
+        existingUser.setPassword("secureExistingHashedPassword_xyz123");
+        existingUser.setRole(Role.USER);
+        existingUser.setEmailVerified(true);
+
+        GoogleAuthService.GoogleUserInfo gUser = new GoogleAuthService.GoogleUserInfo(
+                "goog_77", "existing.traveler@example.com", "Pravesh Garg", null, true
+        );
+        when(googleAuthService.verifyToken("token_77")).thenReturn(gUser);
+        when(userRepository.findByGoogleId("goog_77")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("existing.traveler@example.com")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser)).thenReturn(existingUser);
+        when(jwtService.generateToken("existing.traveler@example.com", "USER")).thenReturn("jwt_77");
+
+        GoogleLoginRequestDto req = new GoogleLoginRequestDto("token_77");
+        LoginResponseDTO res = userService.loginWithGoogle(req);
+
+        assertNotNull(res);
+        assertEquals(77L, res.getId(), "User ID must strictly be preserved");
+        assertEquals("USER", res.getRole(), "User role must strictly be preserved");
+        assertEquals("Pravesh Garg", res.getName(), "Placeholder name must be replaced by verified Google name");
+        assertEquals("secureExistingHashedPassword_xyz123", existingUser.getPassword(), "User password must be preserved");
+        assertEquals("goog_77", existingUser.getGoogleId(), "Google ID must be linked");
+    }
+
     // =========================================================================
     // 6. GOOGLE AUTH SERVICE ENVIRONMENT HARDENING
     // =========================================================================

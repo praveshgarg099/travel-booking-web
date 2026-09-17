@@ -12,10 +12,39 @@ export const DESTINATION_PHOTOS = [
   'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80', // Swiss Alps
 ]
 
+// Authentic destination photography for Yatramigo's core destinations
+export const DESTINATION_PHOTO_MAP = {
+  goa: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1200&q=80', // Goa Beach
+  jaipur: 'https://images.unsplash.com/photo-1603284008272-a10ff74041c2?auto=format&fit=crop&w=1200&q=80', // Hawa Mahal Jaipur
+  manali: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1200&q=80', // Manali Snow Himalayas
+  kerala: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=1200&q=80', // Kerala Backwaters Alleppey
+  kashmir: 'https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&w=1200&q=80', // Kashmir Dal Lake
+  udaipur: 'https://images.unsplash.com/photo-1595867818082-083862f3d630?auto=format&fit=crop&w=1200&q=80', // Udaipur Lake Palace
+  rishikesh: 'https://images.unsplash.com/photo-1600100397608-f010f4459f20?auto=format&fit=crop&w=1200&q=80', // Rishikesh Ganga
+  andaman: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?auto=format&fit=crop&w=1200&q=80', // Andaman Island
+  jaisalmer: 'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?auto=format&fit=crop&w=1200&q=80', // Jaisalmer Desert Fort
+  darjeeling: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80', // Darjeeling Tea Gardens
+}
+
 /**
- * Returns a stable photo URL based on item ID or title
+ * Returns a high-res photo URL based on destination name, package ID, or title
  */
-export const getPackageImage = (id = 1, title = '') => {
+export const getPackageImage = (id = 1, title = '', destinationName = '') => {
+  if (destinationName) {
+    const key = destinationName.trim().toLowerCase()
+    if (DESTINATION_PHOTO_MAP[key]) {
+      return DESTINATION_PHOTO_MAP[key]
+    }
+  }
+
+  // Check title for destination names as fallback
+  const lowerTitle = (title || '').toLowerCase()
+  for (const [destKey, photoUrl] of Object.entries(DESTINATION_PHOTO_MAP)) {
+    if (lowerTitle.includes(destKey)) {
+      return photoUrl
+    }
+  }
+
   const index = Math.abs(Number(id) || title.length || 0) % DESTINATION_PHOTOS.length
   return DESTINATION_PHOTOS[index]
 }

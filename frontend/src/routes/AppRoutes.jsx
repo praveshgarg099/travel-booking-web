@@ -68,6 +68,7 @@ export const AppRoutes = () => {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/packages" element={<Packages />} />
+        <Route path="/explore" element={<Packages />} />
         <Route path="/packages/:id" element={<PackageDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

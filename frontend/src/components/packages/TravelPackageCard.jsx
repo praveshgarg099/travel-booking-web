@@ -3,22 +3,51 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Clock, Users, ArrowRight, MapPin, Star } from 'lucide-react'
 import { formatCurrency } from '../../utils/formatters'
 import { getPackageImage } from '../../utils/imageHelper'
-import { getExtendedPackageData } from '../../data/demoData'
 
-export const TravelPackageCard = ({ pkg, destinationName = '' }) => {
+export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null }) => {
   const navigate = useNavigate()
-  const extendedData = getExtendedPackageData(pkg.title) || {}
-  const imageUrl = extendedData.image || getPackageImage(pkg.id, pkg.title)
-  const isSoldOut = pkg.availableSeats <= 0
+  const dest = destinationName || pkg.destinationName || ''
+  const imageUrl = getPackageImage(pkg.id, pkg.title, dest)
+  const isSoldOut = pkg.availableSeats == null || pkg.availableSeats <= 0
+
+  const handleCardClick = (e) => {
+    // Avoid triggering card navigation if clicking directly on a link or button
+    if (e.target.closest('a') || e.target.closest('button')) return
+    navigate(`/packages/${pkg.id}`)
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      navigate(`/packages/${pkg.id}`)
+    }
+  }
 
   return (
-    <div className="card card-hover" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <article
+      className="card card-hover"
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label={`Travel package: ${pkg.title} in ${dest || 'India'}, ${pkg.duration} days for ${formatCurrency(pkg.price)} per person`}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        cursor: 'pointer',
+        position: 'relative',
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
+    >
       {/* Thumbnail with overlay badges */}
-      <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden', backgroundColor: 'var(--slate-100)' }}>
         <img
           src={imageUrl}
-          alt={pkg.title}
+          alt={`${pkg.title} scenic view in ${dest || 'India'}`}
           className="zoom-img"
+          loading="lazy"
           style={{
             width: '100%',
             height: '100%',
@@ -29,97 +58,127 @@ export const TravelPackageCard = ({ pkg, destinationName = '' }) => {
             e.target.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80'
           }}
         />
+
+        {/* Top Left: Destination tag */}
+        {dest && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '1rem',
+              left: '1rem',
+              display: 'flex',
+              gap: '0.5rem',
+            }}
+          >
+            <span
+              className="badge"
+              style={{
+                backgroundColor: 'rgba(15, 23, 42, 0.82)',
+                color: 'var(--white)',
+                backdropFilter: 'blur(6px)',
+                boxShadow: 'var(--shadow-sm)',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+              }}
+            >
+              <MapPin size={13} color="#38bdf8" /> {dest}
+            </span>
+          </div>
+        )}
+
+        {/* Top Right: Seat Availability Badge */}
         <div
           style={{
             position: 'absolute',
             top: '1rem',
-            left: '1rem',
-            display: 'flex',
-            gap: '0.5rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          {extendedData.category && (
-            <span
-              className="badge"
-              style={{
-                backgroundColor: 'var(--primary)',
-                color: 'var(--white)',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
-              {extendedData.category}
-            </span>
-          )}
-          {destinationName && (
-            <span
-              className="badge"
-              style={{
-                backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                color: 'var(--white)',
-                backdropFilter: 'blur(4px)',
-              }}
-            >
-              <MapPin size={12} /> {destinationName}
-            </span>
-          )}
-        </div>
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '1rem',
             right: '1rem',
-            display: 'flex',
-            gap: '0.5rem'
           }}
         >
-          {extendedData.rating && (
-            <span
-              className="badge"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                color: 'var(--slate-800)',
-                fontWeight: 700,
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
-              <Star size={12} fill="#b45309" color="#b45309" /> {extendedData.rating}
-            </span>
-          )}
           <span
-            className="badge"
+            className={`badge ${
+              isSoldOut
+                ? 'badge-danger'
+                : pkg.availableSeats <= 5
+                ? 'badge-warning'
+                : 'badge-success'
+            }`}
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              color: 'var(--slate-800)',
-              fontWeight: 700,
               boxShadow: 'var(--shadow-sm)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              textTransform: 'none',
             }}
-          >
-            <Clock size={12} /> {pkg.duration} Days
-          </span>
-        </div>
-      </div>
-
-      {/* Body Content */}
-      <div className="card-body" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <span
-            className={`badge ${isSoldOut ? 'badge-danger' : pkg.availableSeats <= 5 ? 'badge-warning' : 'badge-success'}`}
           >
             <Users size={12} />
             {isSoldOut ? 'Sold Out' : `${pkg.availableSeats} Seats Left`}
           </span>
         </div>
 
+        {/* Bottom Bar: Duration & Real Rating badges */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '0.85rem',
+            left: '1rem',
+            right: '1rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          <span
+            className="badge"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              color: 'var(--slate-800)',
+              fontWeight: 700,
+              fontSize: '0.775rem',
+              boxShadow: 'var(--shadow-sm)',
+              textTransform: 'none',
+            }}
+          >
+            <Clock size={13} color="var(--primary)" /> {pkg.duration} {pkg.duration === 1 ? 'Day' : 'Days'}
+          </span>
+
+          {/* Display REAL rating badge only if review data actually exists */}
+          {ratingData && ratingData.reviewCount > 0 ? (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                color: '#92400e',
+                fontWeight: 700,
+                fontSize: '0.775rem',
+                boxShadow: 'var(--shadow-sm)',
+                textTransform: 'none',
+              }}
+              title={`Rated ${ratingData.avgRating.toFixed(1)} out of 5 based on ${ratingData.reviewCount} traveler review${ratingData.reviewCount > 1 ? 's' : ''}`}
+            >
+              <Star size={13} fill="#f59e0b" color="#f59e0b" />
+              <span>{ratingData.avgRating.toFixed(1)}</span>
+              <span style={{ color: 'var(--slate-500)', fontWeight: 500, fontSize: '0.725rem' }}>
+                ({ratingData.reviewCount})
+              </span>
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Body Content */}
+      <div className="card-body" style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '1.25rem 1.5rem 1.5rem' }}>
         <h3
           style={{
             fontSize: '1.2rem',
-            marginBottom: '0.65rem',
+            fontWeight: 700,
+            marginBottom: '0.5rem',
             color: 'var(--slate-900)',
             display: '-webkit-box',
             WebkitLineClamp: 1,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
+            lineHeight: 1.35,
           }}
           title={pkg.title}
         >
@@ -129,8 +188,8 @@ export const TravelPackageCard = ({ pkg, destinationName = '' }) => {
         <p
           style={{
             color: 'var(--text-secondary)',
-            fontSize: '0.885rem',
-            lineHeight: 1.5,
+            fontSize: '0.875rem',
+            lineHeight: 1.55,
             marginBottom: '1.25rem',
             display: '-webkit-box',
             WebkitLineClamp: 2,
@@ -145,46 +204,57 @@ export const TravelPackageCard = ({ pkg, destinationName = '' }) => {
         {/* Footer / Price & Actions */}
         <div
           style={{
-            borderTop: '1px solid var(--slate-100)',
+            borderTop: '1px solid var(--border-subtle)',
             paddingTop: '1rem',
             marginTop: 'auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '0.5rem',
+            gap: '0.75rem',
           }}
         >
           <div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>
-              Price per person
+            <span
+              style={{
+                fontSize: '0.725rem',
+                color: 'var(--text-muted)',
+                display: 'block',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+              }}
+            >
+              Starting from
             </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
               <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
                 {formatCurrency(pkg.price)}
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                per person
+                / person
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.45rem' }}>
-            <Link to={`/packages/${pkg.id}`} className="btn btn-secondary btn-sm" title="View Details">
-              Details
-            </Link>
-            <button
-              onClick={() => navigate(`/packages/${pkg.id}`)}
-              disabled={isSoldOut}
-              className="btn btn-primary btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-            >
-              <span>Book</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
+          <Link
+            to={`/packages/${pkg.id}`}
+            className="btn btn-primary btn-sm"
+            style={{
+              padding: '0.55rem 1.15rem',
+              borderRadius: 'var(--radius-lg)',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              gap: '0.35rem',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`View details for ${pkg.title}`}
+          >
+            <span>View Details</span>
+            <ArrowRight size={14} />
+          </Link>
         </div>
       </div>
-    </div>
+    </article>
   )
 }
 

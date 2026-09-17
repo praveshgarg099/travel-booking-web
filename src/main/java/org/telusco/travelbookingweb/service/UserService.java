@@ -342,6 +342,22 @@ public class UserService {
         return "A new 6-digit verification code has been sent to " + cleanEmail;
     }
 
+    private boolean isPlaceholderName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return true;
+        }
+        String trimmed = name.trim();
+        return trimmed.equalsIgnoreCase("Google Traveler");
+    }
+
+    private boolean isMeaningfulName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return false;
+        }
+        String trimmed = name.trim();
+        return !trimmed.equalsIgnoreCase("Google Traveler");
+    }
+
     // Google Sign-In / Sign-Up
     public LoginResponseDTO loginWithGoogle(GoogleLoginRequestDto request) {
         GoogleAuthService.GoogleUserInfo googleUser = googleAuthService.verifyToken(request.getIdToken());
@@ -357,6 +373,10 @@ public class UserService {
             userOpt = userRepository.findByEmail(email);
         }
 
+        String resolvedGoogleName = googleUser.name() != null && !googleUser.name().trim().isEmpty()
+                ? googleUser.name().trim()
+                : "Google Traveler";
+
         User user;
         if (userOpt.isPresent()) {
             user = userOpt.get();
@@ -364,10 +384,17 @@ public class UserService {
                 user.setGoogleId(googleUser.googleId());
             }
             user.setEmailVerified(true);
+
+            // Only replace null, blank, or generic placeholder "Google Traveler" with verified Google display name.
+            // Existing meaningful custom names (e.g. "Pravesh Garg") are preserved.
+            if (isPlaceholderName(user.getName()) && isMeaningfulName(resolvedGoogleName)) {
+                user.setName(resolvedGoogleName);
+            }
+
             user = userRepository.save(user);
         } else {
             user = new User();
-            user.setName(googleUser.name() != null ? googleUser.name() : "Google Traveler");
+            user.setName(resolvedGoogleName);
             user.setEmail(email);
             user.setRole(Role.USER);
             user.setEmailVerified(true);

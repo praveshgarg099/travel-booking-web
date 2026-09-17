@@ -11,6 +11,7 @@ export const GoogleSignInButton = ({ text = 'Continue with Google' }) => {
   const [loading, setLoading] = useState(false)
   const [showDevModal, setShowDevModal] = useState(false)
   const [devEmail, setDevEmail] = useState('traveler.google@yatramigo.dev')
+  const [devName, setDevName] = useState('')
   const [gisLoaded, setGisLoaded] = useState(false)
   const googleBtnContainerRef = useRef(null)
 
@@ -102,7 +103,9 @@ export const GoogleSignInButton = ({ text = 'Continue with Google' }) => {
 
     try {
       setLoading(true)
-      const mockToken = `test_google_token_${devEmail.trim()}`
+      const mockToken = devName.trim()
+        ? `test_google_token_${devName.trim()}:${devEmail.trim()}`
+        : `test_google_token_${devEmail.trim()}`
       const user = await loginWithGoogle(mockToken)
       toast.success(`Google Sign-In successful for ${user.name || devEmail}!`)
       setShowDevModal(false)
@@ -255,6 +258,19 @@ export const GoogleSignInButton = ({ text = 'Continue with Google' }) => {
             </p>
 
             <form onSubmit={handleDevGoogleLogin}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ fontSize: '0.85rem' }}>
+                  Full Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={devName}
+                  onChange={(e) => setDevName(e.target.value)}
+                  placeholder="e.g. Pravesh Garg"
+                />
+              </div>
+
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label" style={{ fontSize: '0.85rem' }}>
                   Google Account Email

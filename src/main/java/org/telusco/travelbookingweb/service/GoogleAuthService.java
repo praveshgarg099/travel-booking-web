@@ -43,6 +43,26 @@ public class GoogleAuthService {
         return environment != null && environment.acceptsProfiles(Profiles.of("prod", "production"));
     }
 
+    public static String resolveGoogleDisplayName(String name, String givenName, String familyName) {
+        if (name != null && !name.trim().isEmpty()) {
+            return name.trim();
+        }
+        StringBuilder sb = new StringBuilder();
+        if (givenName != null && !givenName.trim().isEmpty()) {
+            sb.append(givenName.trim());
+        }
+        if (familyName != null && !familyName.trim().isEmpty()) {
+            if (!sb.isEmpty()) {
+                sb.append(" ");
+            }
+            sb.append(familyName.trim());
+        }
+        if (!sb.isEmpty()) {
+            return sb.toString();
+        }
+        return "Google Traveler";
+    }
+
     public GoogleUserInfo verifyToken(String idTokenString) {
         if (idTokenString == null || idTokenString.trim().isEmpty()) {
             throw new InvalidCredentialsException("Google ID token cannot be empty");
@@ -56,10 +76,20 @@ public class GoogleAuthService {
                 throw new InvalidCredentialsException("Simulated Google authentication is disabled in this environment.");
             }
 
-            log.warn("[DEV MODE] Bypassing Google token verification with simulated test token: {}", idTokenString);
-            String email = idTokenString.replace("test_google_token_", "").trim();
+            log.warn("[DEV MODE] Bypassing Google token verification with simulated test token");
+            String raw = idTokenString.replace("test_google_token_", "").trim();
+            String email;
+            String simName = null;
+            if (raw.contains(":")) {
+                String[] parts = raw.split(":", 2);
+                simName = parts[0].trim();
+                email = parts[1].trim();
+            } else {
+                email = raw;
+            }
             if (email.isEmpty()) email = "googleuser@example.com";
-            return new GoogleUserInfo("goog_sub_" + Math.abs(email.hashCode()), email, "Google Traveler", null, true);
+            String resolvedName = (simName != null && !simName.isBlank()) ? simName : "Google Traveler";
+            return new GoogleUserInfo("goog_sub_" + Math.abs(email.hashCode()), email, resolvedName, null, true);
         }
 
         // In production, Google Client ID must be explicitly configured
@@ -75,7 +105,8 @@ public class GoogleAuthService {
             );
 
             if (configuredClientId != null && !configuredClientId.trim().isEmpty()) {
-                verifierBuilder.setAudience(Collections.singletonList(configuredClientId.trim()));
+                String cleanClientId = configuredClientId.trim().replace("\"", "").replace("'", "");
+                verifierBuilder.setAudience(Collections.singletonList(cleanClientId));
             }
 
             GoogleIdTokenVerifier verifier = verifierBuilder.build();
@@ -91,6 +122,8 @@ public class GoogleAuthService {
             String email = payload.getEmail();
             boolean emailVerified = Boolean.TRUE.equals(payload.getEmailVerified());
             String name = (String) payload.get("name");
+            String givenName = (String) payload.get("given_name");
+            String familyName = (String) payload.get("family_name");
             String pictureUrl = (String) payload.get("picture");
 
             if (googleId == null || googleId.isBlank()) {
@@ -106,8 +139,10 @@ public class GoogleAuthService {
                 throw new InvalidCredentialsException("Your Google email could not be verified.");
             }
 
+            String resolvedName = resolveGoogleDisplayName(name, givenName, familyName);
+
             log.info("Successfully verified Google ID token for email: {}", email);
-            return new GoogleUserInfo(googleId, email, name, pictureUrl, true);
+            return new GoogleUserInfo(googleId, email, resolvedName, pictureUrl, true);
         } catch (InvalidCredentialsException e) {
             throw e;
         } catch (Exception e) {

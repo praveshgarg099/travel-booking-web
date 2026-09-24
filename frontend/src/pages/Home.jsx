@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { packageService } from '../services/packageService'
 import { destinationService } from '../services/destinationService'
 import { reviewService } from '../services/reviewService'
@@ -25,11 +25,23 @@ import {
 
 export const Home = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [packages, setPackages] = useState([])
   const [destinations, setDestinations] = useState([])
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    if (location.hash === '#destinations') {
+      const el = document.getElementById('destinations')
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth' })
+        }, 80)
+      }
+    }
+  }, [location.hash, loading])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -259,39 +271,39 @@ export const Home = () => {
       </section>
 
       {/* 3. POPULAR DESTINATIONS SPOTLIGHT */}
-      {destinations.length > 0 && (
-        <section style={{ padding: '5rem 0 3rem', backgroundColor: 'var(--white)' }}>
-          <div className="container">
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'flex-end',
-                marginBottom: '2.5rem',
-                gap: '1rem',
-              }}
-            >
-              <div>
-                <span
-                  style={{
-                    color: 'var(--primary)',
-                    fontWeight: 700,
-                    fontSize: '0.825rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  Top Places To Visit
-                </span>
-                <h2 style={{ marginTop: '0.35rem' }}>Popular Destinations</h2>
-              </div>
-              <Link to="/packages" className="btn btn-outline btn-sm">
-                <span>View All Tours</span>
-                <ArrowRight size={15} />
-              </Link>
+      <section id="destinations" style={{ padding: '5rem 0 3rem', backgroundColor: 'var(--white)' }}>
+        <div className="container">
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              marginBottom: '2.5rem',
+              gap: '1rem',
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  color: 'var(--primary)',
+                  fontWeight: 700,
+                  fontSize: '0.825rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Top Places To Visit
+              </span>
+              <h2 style={{ marginTop: '0.35rem' }}>Popular Destinations</h2>
             </div>
+            <Link to="/packages" className="btn btn-outline btn-sm">
+              <span>View All Tours</span>
+              <ArrowRight size={15} />
+            </Link>
+          </div>
 
+          {destinations.length > 0 ? (
             <div
               style={{
                 display: 'grid',
@@ -354,9 +366,13 @@ export const Home = () => {
                 </Link>
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          ) : loading ? (
+            <div style={{ padding: '2rem 0', color: 'var(--text-muted)' }}>
+              Loading popular destinations...
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       {/* 4. FEATURED PACKAGES */}
       <section style={{ padding: '5rem 0', backgroundColor: 'var(--bg-main)' }}>

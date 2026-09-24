@@ -5,7 +5,6 @@ import { Compass, Heart, Mail, Phone, MapPin, Shield, Award, Clock, ArrowRight }
 export const Footer = () => {
   return (
     <footer
-      id="about"
       style={{
         backgroundColor: 'var(--slate-950)',
         color: 'var(--slate-300)',
@@ -102,8 +101,13 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/packages?view=destinations" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                <Link to="/#destinations" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
                   Popular Destinations
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  About Yatramigo
                 </Link>
               </li>
               <li>

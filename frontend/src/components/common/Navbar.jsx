@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
+  Home as HomeIcon,
   Compass,
   Menu,
   X,
@@ -85,6 +86,30 @@ export const Navbar = () => {
     }
   }
 
+  const isDestinationsActive = location.pathname === '/' && location.hash === '#destinations'
+  const isHomeActive = location.pathname === '/' && location.hash !== '#destinations'
+
+  const handleDestinationsClick = (e) => {
+    setMobileMenuOpen(false)
+    if (location.pathname === '/') {
+      e.preventDefault()
+      const element = document.getElementById('destinations')
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+        window.history.pushState(null, '', '#destinations')
+      }
+    } else {
+      navigate('/#destinations')
+    }
+  }
+
+  const handleHomeClick = () => {
+    setMobileMenuOpen(false)
+    if (location.pathname === '/' && location.hash) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   return (
     <header
       className="glass-nav"
@@ -152,6 +177,19 @@ export const Navbar = () => {
           aria-label="Main navigation"
         >
           <NavLink
+            to="/"
+            end
+            onClick={handleHomeClick}
+            style={() => ({
+              fontWeight: 600,
+              fontSize: '0.925rem',
+              color: isHomeActive ? 'var(--primary)' : 'var(--slate-700)',
+              transition: 'color 0.15s ease',
+            })}
+          >
+            Home
+          </NavLink>
+          <NavLink
             to="/packages"
             style={({ isActive }) => ({
               fontWeight: 600,
@@ -162,8 +200,20 @@ export const Navbar = () => {
           >
             Explore
           </NavLink>
+          <Link
+            to="/#destinations"
+            onClick={handleDestinationsClick}
+            style={{
+              fontWeight: 600,
+              fontSize: '0.925rem',
+              color: isDestinationsActive ? 'var(--primary)' : 'var(--slate-700)',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            Destinations
+          </Link>
           <NavLink
-            to="/packages?view=destinations"
+            to="/about"
             style={({ isActive }) => ({
               fontWeight: 600,
               fontSize: '0.925rem',
@@ -171,11 +221,12 @@ export const Navbar = () => {
               transition: 'color 0.15s ease',
             })}
           >
-            Destinations
+            About
           </NavLink>
+
           {isAuthenticated && (
             <NavLink
-              to="/bookings"
+              to="/dashboard"
               style={({ isActive }) => ({
                 fontWeight: 600,
                 fontSize: '0.925rem',
@@ -183,20 +234,9 @@ export const Navbar = () => {
                 transition: 'color 0.15s ease',
               })}
             >
-              Bookings
+              Dashboard
             </NavLink>
           )}
-          <a
-            href="/#about"
-            style={{
-              fontWeight: 600,
-              fontSize: '0.925rem',
-              color: 'var(--slate-700)',
-              transition: 'color 0.15s ease',
-            }}
-          >
-            About
-          </a>
 
           {isAdmin && (
             <NavLink
@@ -633,6 +673,26 @@ export const Navbar = () => {
                 </div>
 
                 <NavLink
+                  to="/"
+                  end
+                  onClick={handleHomeClick}
+                  style={() => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: 'var(--radius-lg)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    color: isHomeActive ? 'var(--primary)' : 'var(--slate-800)',
+                    backgroundColor: isHomeActive ? 'var(--primary-light)' : 'transparent',
+                  })}
+                >
+                  <HomeIcon size={18} />
+                  <span>Home</span>
+                </NavLink>
+
+                <NavLink
                   to="/packages"
                   onClick={() => setMobileMenuOpen(false)}
                   style={({ isActive }) => ({
@@ -651,8 +711,27 @@ export const Navbar = () => {
                   <span>Explore Packages</span>
                 </NavLink>
 
+                <Link
+                  to="/#destinations"
+                  onClick={handleDestinationsClick}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: 'var(--radius-lg)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    color: isDestinationsActive ? 'var(--primary)' : 'var(--slate-800)',
+                    backgroundColor: isDestinationsActive ? 'var(--primary-light)' : 'transparent',
+                  }}
+                >
+                  <MapPin size={18} />
+                  <span>Destinations</span>
+                </Link>
+
                 <NavLink
-                  to="/packages?view=destinations"
+                  to="/about"
                   onClick={() => setMobileMenuOpen(false)}
                   style={({ isActive }) => ({
                     display: 'flex',
@@ -666,27 +745,9 @@ export const Navbar = () => {
                     backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
                   })}
                 >
-                  <MapPin size={18} />
-                  <span>Destinations</span>
-                </NavLink>
-
-                <a
-                  href="/#about"
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem 0.85rem',
-                    borderRadius: 'var(--radius-lg)',
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
-                    color: 'var(--slate-800)',
-                  }}
-                >
                   <Info size={18} />
                   <span>About Yatramigo</span>
-                </a>
+                </NavLink>
               </div>
 
               {/* Account Section */}

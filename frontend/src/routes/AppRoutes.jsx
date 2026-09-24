@@ -10,6 +10,7 @@ import AdminRoute from './AdminRoute'
 import Home from '../pages/Home'
 import Packages from '../pages/Packages'
 import PackageDetails from '../pages/PackageDetails'
+import About from '../pages/About'
 import Login from '../pages/Login'
 import Register from '../pages/Register'
 import VerifyEmail from '../pages/VerifyEmail'
@@ -69,6 +70,8 @@ export const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/packages" element={<Packages />} />
         <Route path="/explore" element={<Packages />} />
+        <Route path="/destinations" element={<Navigate to="/#destinations" replace />} />
+        <Route path="/about" element={<About />} />
         <Route path="/packages/:id" element={<PackageDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -98,10 +101,15 @@ export const AppRoutes = () => {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/dashboard/profile" element={<Profile />} />
         <Route path="/bookings" element={<MyBookings />} />
+        <Route path="/dashboard/bookings" element={<MyBookings />} />
         <Route path="/bookings/:id" element={<BookingDetails />} />
+        <Route path="/dashboard/bookings/:id" element={<BookingDetails />} />
         <Route path="/payments" element={<MyPayments />} />
+        <Route path="/dashboard/payments" element={<MyPayments />} />
         <Route path="/reviews" element={<MyReviews />} />
+        <Route path="/dashboard/reviews" element={<MyReviews />} />
       </Route>
 
       {/* Admin Pages in AdminLayout */}

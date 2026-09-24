@@ -64,8 +64,8 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
           <div
             style={{
               position: 'absolute',
-              top: '1rem',
-              left: '1rem',
+              top: '0.85rem',
+              left: '0.85rem',
               display: 'flex',
               gap: '0.5rem',
             }}
@@ -73,13 +73,13 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
             <span
               className="badge"
               style={{
-                backgroundColor: 'rgba(15, 23, 42, 0.82)',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)',
                 color: 'var(--white)',
-                backdropFilter: 'blur(6px)',
-                boxShadow: 'var(--shadow-sm)',
+                backdropFilter: 'blur(8px)',
                 textTransform: 'none',
                 fontWeight: 600,
                 fontSize: '0.8rem',
+                padding: '0.3rem 0.7rem',
               }}
             >
               <MapPin size={13} color="#38bdf8" /> {dest}
@@ -91,8 +91,8 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
         <div
           style={{
             position: 'absolute',
-            top: '1rem',
-            right: '1rem',
+            top: '0.85rem',
+            right: '0.85rem',
           }}
         >
           <span
@@ -104,10 +104,10 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
                 : 'badge-success'
             }`}
             style={{
-              boxShadow: 'var(--shadow-sm)',
               fontSize: '0.75rem',
               fontWeight: 700,
               textTransform: 'none',
+              padding: '0.3rem 0.65rem',
             }}
           >
             <Users size={12} />
@@ -120,8 +120,8 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
           style={{
             position: 'absolute',
             bottom: '0.85rem',
-            left: '1rem',
-            right: '1rem',
+            left: '0.85rem',
+            right: '0.85rem',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -135,14 +135,15 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
               color: 'var(--slate-800)',
               fontWeight: 700,
               fontSize: '0.775rem',
-              boxShadow: 'var(--shadow-sm)',
+              boxShadow: 'var(--shadow-xs)',
               textTransform: 'none',
+              backdropFilter: 'blur(6px)',
             }}
           >
             <Clock size={13} color="var(--primary)" /> {pkg.duration} {pkg.duration === 1 ? 'Day' : 'Days'}
           </span>
 
-          {/* Display REAL rating badge only if review data actually exists */}
+          {/* Display REAL rating badge ONLY if verified database review data exists */}
           {ratingData && ratingData.reviewCount > 0 ? (
             <span
               className="badge"
@@ -151,8 +152,9 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
                 color: '#92400e',
                 fontWeight: 700,
                 fontSize: '0.775rem',
-                boxShadow: 'var(--shadow-sm)',
+                boxShadow: 'var(--shadow-xs)',
                 textTransform: 'none',
+                backdropFilter: 'blur(6px)',
               }}
               title={`Rated ${ratingData.avgRating.toFixed(1)} out of 5 based on ${ratingData.reviewCount} traveler review${ratingData.reviewCount > 1 ? 's' : ''}`}
             >
@@ -227,7 +229,7 @@ export const TravelPackageCard = ({ pkg, destinationName = '', ratingData = null
               Starting from
             </span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-              <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
+              <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-dark)', fontFamily: 'var(--font-heading)' }}>
                 {formatCurrency(pkg.price)}
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>

@@ -1,15 +1,17 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Compass, Heart, Mail, Phone, MapPin, Shield, Award, Clock } from 'lucide-react'
+import { Compass, Heart, Mail, Phone, MapPin, Shield, Award, Clock, ArrowRight } from 'lucide-react'
 
 export const Footer = () => {
   return (
     <footer
+      id="about"
       style={{
-        backgroundColor: 'var(--slate-900)',
+        backgroundColor: 'var(--slate-950)',
         color: 'var(--slate-300)',
-        padding: '4rem 0 2rem',
+        padding: '4.5rem 0 2rem',
         marginTop: 'auto',
+        borderTop: '1px solid var(--slate-800)',
       }}
     >
       <div className="container">
@@ -18,20 +20,22 @@ export const Footer = () => {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '2.5rem',
-            marginBottom: '3rem',
+            marginBottom: '3.5rem',
           }}
         >
-          {/* Col 1: Brand */}
+          {/* Col 1: Brand & Identity */}
           <div>
-            <div
+            <Link
+              to="/"
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.65rem',
                 color: 'var(--white)',
                 fontWeight: 800,
-                fontSize: '1.4rem',
+                fontSize: '1.45rem',
                 marginBottom: '1rem',
+                textDecoration: 'none',
               }}
             >
               <div
@@ -50,44 +54,66 @@ export const Footer = () => {
               <span>
                 Yatra<span style={{ color: 'var(--primary-light)' }}>migo</span>
               </span>
-            </div>
-            <p style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--slate-400)', marginBottom: '1.25rem' }}>
-              Curating unforgettable travel experiences and authentic journeys worldwide. Safe, verified, and transparent travel bookings.
+            </Link>
+            <p
+              style={{
+                fontSize: '0.9rem',
+                lineHeight: '1.65',
+                color: 'var(--slate-400)',
+                marginBottom: '1.5rem',
+              }}
+            >
+              Curating authentic travel itineraries and stress-free vacations. Transparent pricing, verified backend reservations, and seamless online payments.
             </p>
-            <div style={{ display: 'flex', gap: '1rem', color: 'var(--slate-400)', fontSize: '0.85rem' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Shield size={16} color="var(--emerald)" /> Verified Trips
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Award size={16} color="var(--amber)" /> Best Rates
-              </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', color: 'var(--slate-300)', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Shield size={16} color="var(--emerald)" />
+                <span>100% Real Database Seat Confirmation</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Award size={16} color="var(--amber)" />
+                <span>Authorized Razorpay Payment Processing</span>
+              </div>
             </div>
           </div>
 
           {/* Col 2: Quick Links */}
           <div>
-            <h4 style={{ color: 'var(--white)', fontSize: '1rem', marginBottom: '1.2rem', fontWeight: 600 }}>
-              Quick Links
+            <h4
+              style={{
+                color: 'var(--white)',
+                fontSize: '1rem',
+                marginBottom: '1.25rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+              }}
+            >
+              Explore
             </h4>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.9rem' }}>
+            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
               <li>
-                <Link to="/" style={{ color: 'var(--slate-300)' }} onMouseEnter={(e) => (e.target.style.color = 'var(--primary)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-300)')}>
+                <Link to="/" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
                   Home
                 </Link>
               </li>
               <li>
-                <Link to="/packages" style={{ color: 'var(--slate-300)' }} onMouseEnter={(e) => (e.target.style.color = 'var(--primary)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-300)')}>
-                  Explore All Packages
+                <Link to="/packages" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  All Travel Packages
                 </Link>
               </li>
               <li>
-                <Link to="/dashboard" style={{ color: 'var(--slate-300)' }} onMouseEnter={(e) => (e.target.style.color = 'var(--primary)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-300)')}>
-                  User Dashboard
+                <Link to="/packages?view=destinations" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  Popular Destinations
                 </Link>
               </li>
               <li>
-                <Link to="/bookings" style={{ color: 'var(--slate-300)' }} onMouseEnter={(e) => (e.target.style.color = 'var(--primary)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-300)')}>
-                  My Bookings
+                <Link to="/dashboard" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  Traveler Portal
+                </Link>
+              </li>
+              <li>
+                <Link to="/bookings" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  My Reservations
                 </Link>
               </li>
             </ul>
@@ -95,48 +121,85 @@ export const Footer = () => {
 
           {/* Col 3: Popular Destinations */}
           <div>
-            <h4 style={{ color: 'var(--white)', fontSize: '1rem', marginBottom: '1.2rem', fontWeight: 600 }}>
+            <h4
+              style={{
+                color: 'var(--white)',
+                fontSize: '1rem',
+                marginBottom: '1.25rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+              }}
+            >
               Destinations
             </h4>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.9rem' }}>
+            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
               <li>
-                <Link to="/packages" style={{ color: 'var(--slate-300)' }}>
-                  Santorini, Greece
+                <Link to="/packages?q=Goa" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  Goa Beaches & Coastal Life
                 </Link>
               </li>
               <li>
-                <Link to="/packages" style={{ color: 'var(--slate-300)' }}>
-                  Kyoto & Tokyo, Japan
+                <Link to="/packages?q=Jaipur" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  Jaipur Royal Heritage
                 </Link>
               </li>
               <li>
-                <Link to="/packages" style={{ color: 'var(--slate-300)' }}>
-                  Bali & Gili Islands, Indonesia
+                <Link to="/packages?q=Manali" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  Manali Himalayan Adventures
                 </Link>
               </li>
               <li>
-                <Link to="/packages" style={{ color: 'var(--slate-300)' }}>
-                  Swiss Alps & Interlaken
+                <Link to="/packages?q=Kerala" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  Kerala Backwaters & Tea Gardens
+                </Link>
+              </li>
+              <li>
+                <Link to="/packages?q=Kashmir" style={{ color: 'var(--slate-400)', transition: 'color 0.15s ease' }} onMouseEnter={(e) => (e.target.style.color = 'var(--white)')} onMouseLeave={(e) => (e.target.style.color = 'var(--slate-400)')}>
+                  Kashmir Valley Serenity
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Col 4: Contact & Support */}
+          {/* Col 4: Concierge & Support */}
           <div>
-            <h4 style={{ color: 'var(--white)', fontSize: '1rem', marginBottom: '1.2rem', fontWeight: 600 }}>
-              Need Help?
+            <h4
+              style={{
+                color: 'var(--white)',
+                fontSize: '1rem',
+                marginBottom: '1.25rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+              }}
+            >
+              Travel Concierge
             </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Mail size={16} color="var(--primary)" /> support@yatramigo.dev
-              </p>
-              <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Phone size={16} color="var(--primary)" /> +1 (800) 555-TRAVEL
-              </p>
-              <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={16} color="var(--primary)" /> 24/7 Concierge Service
-              </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                <Mail size={16} color="var(--primary)" style={{ marginTop: '3px', flexShrink: 0 }} />
+                <div>
+                  <span style={{ display: 'block', color: 'var(--slate-400)', fontSize: '0.775rem' }}>Support Email</span>
+                  <a href="mailto:support@yatramigo.dev" style={{ color: 'var(--white)', fontWeight: 500 }}>
+                    support@yatramigo.dev
+                  </a>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                <Clock size={16} color="var(--emerald)" style={{ marginTop: '3px', flexShrink: 0 }} />
+                <div>
+                  <span style={{ display: 'block', color: 'var(--slate-400)', fontSize: '0.775rem' }}>Concierge Desk</span>
+                  <span style={{ color: 'var(--white)', fontWeight: 500 }}>Daily 08:00 – 22:00 IST</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                <MapPin size={16} color="var(--amber)" style={{ marginTop: '3px', flexShrink: 0 }} />
+                <div>
+                  <span style={{ display: 'block', color: 'var(--slate-400)', fontSize: '0.775rem' }}>Verified Operations</span>
+                  <span style={{ color: 'var(--white)', fontWeight: 500 }}>New Delhi & Bengaluru, India</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -156,9 +219,13 @@ export const Footer = () => {
           }}
         >
           <p>© {new Date().getFullYear()} Yatramigo Travel Bookings. All rights reserved.</p>
-          <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            Crafted with <Heart size={14} color="var(--rose)" fill="var(--rose)" /> for travelers worldwide.
-          </p>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <span>INR (₹) Transparent Pricing</span>
+            <span>Razorpay Authoritative Gateway</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              Crafted with <Heart size={14} color="var(--rose)" fill="var(--rose)" /> for travelers.
+            </span>
+          </div>
         </div>
       </div>
     </footer>

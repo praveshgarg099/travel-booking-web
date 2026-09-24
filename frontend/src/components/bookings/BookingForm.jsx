@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { bookingService } from '../../services/bookingService'
 import { formatCurrency, getTodayDateString } from '../../utils/formatters'
-import { Calendar, Users, ShieldCheck, CreditCard, Sparkles } from 'lucide-react'
+import { Calendar, Users, ShieldCheck, CreditCard, Sparkles, CheckCircle, Info } from 'lucide-react'
 
 export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
   const { isAuthenticated } = useAuth()
@@ -17,11 +17,11 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  const availableSeats = travelPackage.availableSeats || 0
+  const availableSeats = travelPackage?.availableSeats || 0
   const isSoldOut = availableSeats <= 0
   const today = getTodayDateString()
 
-  const unitPrice = travelPackage.price || 0
+  const unitPrice = travelPackage?.price || 0
   const calculatedTotal = unitPrice * numberOfPeople
 
   const handleSubmit = async (e) => {
@@ -34,12 +34,12 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
     }
 
     if (!bookingDate) {
-      setErrorMsg('Please select a booking date.')
+      setErrorMsg('Please select a travel departure date.')
       return
     }
 
     if (bookingDate < today) {
-      setErrorMsg('Booking date cannot be in the past.')
+      setErrorMsg('Travel departure date cannot be in the past.')
       return
     }
 
@@ -57,7 +57,7 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
       }
 
       const createdBooking = await bookingService.createBooking(payload)
-      toast.success('Booking confirmed successfully!')
+      toast.success('Reservation initiated successfully!')
 
       if (onBookingSuccess) {
         onBookingSuccess(createdBooking)
@@ -78,46 +78,50 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
     <div
       className="card"
       style={{
-        boxShadow: 'var(--shadow-lg)',
-        border: '1.5px solid var(--primary-light)',
+        boxShadow: 'var(--shadow-xl)',
+        borderRadius: 'var(--radius-2xl)',
+        overflow: 'hidden',
+        border: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: '90px',
       }}
     >
+      {/* Top Price Header */}
       <div
         style={{
           backgroundColor: 'var(--slate-900)',
           color: 'var(--white)',
-          padding: '1.25rem 1.5rem',
+          padding: '1.5rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}
       >
         <div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--slate-400)', textTransform: 'uppercase' }}>
-            Price per person
+          <span style={{ fontSize: '0.8rem', color: 'var(--slate-400)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+            Price per traveler
           </span>
-          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--white)' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--white)', marginTop: '0.2rem' }}>
             {formatCurrency(unitPrice)}
           </div>
         </div>
-        <span className={`badge ${isSoldOut ? 'badge-danger' : 'badge-success'}`}>
-          {isSoldOut ? 'Sold Out' : `${availableSeats} Seats`}
+        <span className={`badge ${isSoldOut ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.85rem', padding: '0.4rem 0.85rem' }}>
+          {isSoldOut ? 'Sold Out' : `${availableSeats} Seats Left`}
         </span>
       </div>
 
-      <div className="card-body">
+      <div className="card-body" style={{ padding: '1.75rem' }}>
         {errorMsg && (
           <div
             style={{
               padding: '0.75rem 1rem',
-              backgroundColor: 'var(--rose-light)',
-              color: 'var(--rose)',
+              backgroundColor: '#fee2e2',
+              color: '#b91c1c',
               borderRadius: 'var(--radius-md)',
-              fontSize: '0.85rem',
+              fontSize: '0.875rem',
               fontWeight: 500,
               marginBottom: '1.25rem',
+              border: '1px solid #fca5a5',
             }}
           >
             {errorMsg}
@@ -126,10 +130,10 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
 
         <form onSubmit={handleSubmit}>
           {/* Booking Date */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="bookingDate">
-              <Calendar size={15} style={{ display: 'inline', marginRight: '4px' }} />
-              Travel Date
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label className="form-label" htmlFor="bookingDate" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Calendar size={16} color="var(--primary)" />
+              Departure Date
             </label>
             <input
               id="bookingDate"
@@ -140,25 +144,29 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
               onChange={(e) => setBookingDate(e.target.value)}
               disabled={isSoldOut || loading}
               required
+              style={{ fontSize: '0.95rem' }}
             />
-            <span className="form-hint">Departure must be today or in the future</span>
+            <span className="form-hint" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Choose a date starting from today onwards
+            </span>
           </div>
 
           {/* Number of People */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="numberOfPeople">
-              <Users size={15} style={{ display: 'inline', marginRight: '4px' }} />
-              Guests (Seats)
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <label className="form-label" htmlFor="numberOfPeople" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Users size={16} color="var(--primary)" />
+              Number of Guests
             </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary"
                 onClick={() => setNumberOfPeople((prev) => Math.max(1, prev - 1))}
                 disabled={numberOfPeople <= 1 || isSoldOut || loading}
-                style={{ width: '38px', height: '38px', padding: 0 }}
+                style={{ width: '42px', height: '42px', padding: 0, fontSize: '1.2rem', fontWeight: 700 }}
+                aria-label="Decrease travelers"
               >
-                -
+                −
               </button>
               <input
                 id="numberOfPeople"
@@ -166,35 +174,36 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
                 min="1"
                 max={availableSeats || 1}
                 className="form-control"
-                style={{ textAlign: 'center', fontWeight: 700 }}
+                style={{ textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', height: '42px' }}
                 value={numberOfPeople}
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10)
-                  if (!isNaN(val)) setNumberOfPeople(Math.max(1, val))
+                  if (!isNaN(val)) setNumberOfPeople(Math.max(1, Math.min(availableSeats || 10, val)))
                 }}
                 disabled={isSoldOut || loading}
                 required
               />
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary"
                 onClick={() => setNumberOfPeople((prev) => Math.min(availableSeats, prev + 1))}
                 disabled={numberOfPeople >= availableSeats || isSoldOut || loading}
-                style={{ width: '38px', height: '38px', padding: 0 }}
+                style={{ width: '42px', height: '42px', padding: 0, fontSize: '1.2rem', fontWeight: 700 }}
+                aria-label="Increase travelers"
               >
                 +
               </button>
             </div>
           </div>
 
-          {/* Calculated Cost Breakdown */}
+          {/* Transparent Cost Breakdown */}
           <div
             style={{
               background: 'var(--slate-50)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1rem',
-              margin: '1.25rem 0',
-              border: '1px solid var(--slate-200)',
+              borderRadius: 'var(--radius-xl)',
+              padding: '1.25rem',
+              marginBottom: '1.5rem',
+              border: '1px solid var(--border-subtle)',
             }}
           >
             <div
@@ -203,36 +212,11 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
                 justifyContent: 'space-between',
                 fontSize: '0.875rem',
                 color: 'var(--text-secondary)',
-                marginBottom: '0.4rem',
-              }}
-            >
-              <span>Price per traveler</span>
-              <span>{formatCurrency(unitPrice)}</span>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '0.875rem',
-                color: 'var(--text-secondary)',
-                marginBottom: '0.4rem',
-              }}
-            >
-              <span>Number of travelers</span>
-              <span>{numberOfPeople}</span>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '0.875rem',
-                color: 'var(--slate-600)',
-                fontStyle: 'italic',
                 marginBottom: '0.5rem',
               }}
             >
-              <span>Calculation</span>
-              <span>{formatCurrency(unitPrice)} × {numberOfPeople} traveler{numberOfPeople > 1 ? 's' : ''}</span>
+              <span>Base Fare ({numberOfPeople} {numberOfPeople > 1 ? 'travelers' : 'traveler'})</span>
+              <span>{formatCurrency(unitPrice * numberOfPeople)}</span>
             </div>
             <div
               style={{
@@ -243,26 +227,24 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
                 marginBottom: '0.75rem',
               }}
             >
-              <span>Booking fee & Taxes</span>
-              <span>Included</span>
+              <span>Taxes, permits & GST</span>
+              <span style={{ fontWeight: 600 }}>All-inclusive</span>
             </div>
+
             <div
               style={{
                 borderTop: '1px dashed var(--slate-300)',
-                paddingTop: '0.75rem',
+                paddingTop: '0.85rem',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'baseline',
               }}
             >
-              <span style={{ fontWeight: 700, color: 'var(--slate-900)' }}>Estimated Total</span>
-              <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
+              <span style={{ fontWeight: 700, color: 'var(--slate-900)', fontSize: '1rem' }}>Total Amount</span>
+              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
                 {formatCurrency(calculatedTotal)}
               </span>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem', marginBottom: 0 }}>
-              * Calculated authoritatively by server upon reservation
-            </p>
           </div>
 
           {/* Submit Action */}
@@ -270,13 +252,14 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
             type="submit"
             className="btn btn-primary btn-block btn-lg"
             disabled={isSoldOut || loading}
+            style={{ fontWeight: 700, padding: '0.85rem 1rem' }}
           >
             {loading ? (
-              'Confirming Booking...'
+              'Securing Reservation...'
             ) : isSoldOut ? (
               'Package Sold Out'
             ) : !isAuthenticated ? (
-              'Sign In to Reserve'
+              'Sign In to Book'
             ) : (
               'Reserve Package Now'
             )}
@@ -284,7 +267,7 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
 
           <div
             style={{
-              marginTop: '1rem',
+              marginTop: '1.25rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -294,7 +277,7 @@ export const BookingForm = ({ travelPackage, onBookingSuccess }) => {
             }}
           >
             <ShieldCheck size={16} color="var(--emerald)" />
-            <span>Instant confirmation & Secure checkout</span>
+            <span>Instant Confirmation & Free Cancellation Guarantee</span>
           </div>
         </form>
       </div>

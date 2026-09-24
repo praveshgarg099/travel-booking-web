@@ -4,7 +4,7 @@ import { authService } from '../services/authService'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
-import { Compass, User, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react'
+import { Compass, User, Mail, Lock, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react'
 
 export const Register = () => {
   const { user, isAuthenticated } = useAuth()
@@ -48,7 +48,7 @@ export const Register = () => {
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setErrorMsg('Passwords do not match.')
+      setErrorMsg('Passwords do not match. Please re-enter.')
       return
     }
 
@@ -81,35 +81,48 @@ export const Register = () => {
     <div
       style={{
         backgroundColor: 'var(--bg-main)',
-        minHeight: '80vh',
+        minHeight: '82vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '3rem 1.5rem',
       }}
     >
-      <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem 2rem', boxShadow: 'var(--shadow-xl)' }}>
+      <div
+        className="card"
+        style={{
+          maxWidth: '480px',
+          width: '100%',
+          padding: '2.5rem 2.25rem',
+          boxShadow: 'var(--shadow-xl)',
+          borderRadius: 'var(--radius-2xl)',
+          border: '1px solid var(--border-subtle)',
+          backgroundColor: 'var(--white)',
+        }}
+      >
         {/* Header Branding */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, var(--primary), #0284c7)',
+              width: '52px',
+              height: '52px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
               color: 'var(--white)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1rem',
-              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+              margin: '0 auto 1.25rem',
+              boxShadow: '0 8px 16px rgba(2, 132, 199, 0.25)',
             }}
           >
-            <Compass size={26} />
+            <Compass size={28} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Create your Yatramigo account</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
-            Sign up to book tours, manage reservations, and leave verified reviews.
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--slate-900)', letterSpacing: '-0.02em', margin: 0 }}>
+            Create Your Account
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
+            Join Yatramigo to explore curated journeys, manage bookings, and write verified reviews.
           </p>
         </div>
 
@@ -118,14 +131,15 @@ export const Register = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'var(--rose-light)',
-              color: 'var(--rose)',
+              gap: '0.6rem',
+              padding: '0.85rem 1rem',
+              backgroundColor: '#fee2e2',
+              color: '#b91c1c',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.875rem',
               marginBottom: '1.5rem',
               fontWeight: 500,
+              border: '1px solid #fca5a5',
             }}
           >
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
@@ -138,27 +152,27 @@ export const Register = () => {
           <GoogleSignInButton text="Continue with Google" />
         </div>
 
-        {/* Divider matching Section 1 wireframe */}
+        {/* Divider */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             margin: '1.5rem 0',
-            color: 'var(--text-secondary)',
-            fontSize: '0.8rem',
+            color: 'var(--text-muted)',
+            fontSize: '0.75rem',
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
           }}
         >
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
-          <span style={{ padding: '0 0.75rem', fontWeight: 600, color: 'var(--slate-400)' }}>OR</span>
+          <span style={{ padding: '0 0.85rem', fontWeight: 600, color: 'var(--slate-400)' }}>or register with email</span>
           <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
         </div>
 
         <form onSubmit={handleSubmit}>
           {/* Full Name */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="registerName">
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label className="form-label" htmlFor="registerName" style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
               Full Name
             </label>
             <div style={{ position: 'relative' }}>
@@ -166,9 +180,9 @@ export const Register = () => {
                 id="registerName"
                 name="name"
                 type="text"
-                placeholder="Sarah Jenkins"
+                placeholder="Priya Sharma"
                 className="form-control"
-                style={{ paddingLeft: '2.4rem' }}
+                style={{ paddingLeft: '2.5rem' }}
                 value={formData.name}
                 onChange={handleChange}
                 disabled={loading}
@@ -184,18 +198,18 @@ export const Register = () => {
           </div>
 
           {/* Email */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="registerEmail">
-              Email
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label className="form-label" htmlFor="registerEmail" style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+              Email Address
             </label>
             <div style={{ position: 'relative' }}>
               <input
                 id="registerEmail"
                 name="email"
                 type="email"
-                placeholder="sarah@example.com"
+                placeholder="priya@example.com"
                 className="form-control"
-                style={{ paddingLeft: '2.4rem' }}
+                style={{ paddingLeft: '2.5rem' }}
                 value={formData.email}
                 onChange={handleChange}
                 disabled={loading}
@@ -211,8 +225,8 @@ export const Register = () => {
           </div>
 
           {/* Password */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="registerPassword">
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label className="form-label" htmlFor="registerPassword" style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
               Password
             </label>
             <div style={{ position: 'relative' }}>
@@ -222,7 +236,7 @@ export const Register = () => {
                 type="password"
                 placeholder="At least 6 characters"
                 className="form-control"
-                style={{ paddingLeft: '2.4rem' }}
+                style={{ paddingLeft: '2.5rem' }}
                 value={formData.password}
                 onChange={handleChange}
                 disabled={loading}
@@ -238,8 +252,8 @@ export const Register = () => {
           </div>
 
           {/* Confirm Password */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="confirmPassword">
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <label className="form-label" htmlFor="confirmPassword" style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
               Confirm Password
             </label>
             <div style={{ position: 'relative' }}>
@@ -247,9 +261,9 @@ export const Register = () => {
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
-                placeholder="Repeat password"
+                placeholder="Repeat your password"
                 className="form-control"
-                style={{ paddingLeft: '2.4rem' }}
+                style={{ paddingLeft: '2.5rem' }}
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 disabled={loading}
@@ -269,14 +283,14 @@ export const Register = () => {
             type="submit"
             className="btn btn-primary btn-block btn-lg"
             disabled={loading}
-            style={{ marginTop: '1.25rem' }}
+            style={{ fontWeight: 700, padding: '0.85rem 1rem' }}
           >
             {loading ? (
               'Creating Account...'
             ) : (
               <>
                 <span>Create Account</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={17} />
               </>
             )}
           </button>
@@ -293,8 +307,8 @@ export const Register = () => {
           }}
         >
           Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-            Login
+          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 700 }}>
+            Sign In
           </Link>
         </div>
       </div>

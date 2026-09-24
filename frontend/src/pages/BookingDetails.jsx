@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { bookingService } from '../services/bookingService'
 import { packageService } from '../services/packageService'
 import { paymentService } from '../services/paymentService'
@@ -11,11 +11,10 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import ConfirmationDialog from '../components/common/ConfirmationDialog'
 import Modal from '../components/common/Modal'
-import { ArrowLeft, Calendar, Users, CreditCard, Edit3, Trash2, CheckCircle2, ShieldCheck, AlertCircle, Printer, Star, XCircle, FileDown, Loader2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Users, CreditCard, Edit3, CheckCircle2, AlertCircle, Printer, Star, XCircle, FileDown, Loader2 } from 'lucide-react'
 
 export const BookingDetails = () => {
   const { id } = useParams()
-  const navigate = useNavigate()
   const toast = useToast()
   const { isAdmin } = useAuth()
 

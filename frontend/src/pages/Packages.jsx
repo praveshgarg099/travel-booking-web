@@ -48,12 +48,12 @@ export const Packages = () => {
         reviewService.getAllReviews(),
       ])
 
-      const loadedPkgs = pkgsResult.status === 'fulfilled' ? pkgsResult.value || [] : []
-      const loadedDests = destsResult.status === 'fulfilled' ? destsResult.value || [] : []
-      const loadedRevs = revsResult.status === 'fulfilled' ? revsResult.value || [] : []
+      const loadedPkgs = pkgsResult.status === 'fulfilled' && Array.isArray(pkgsResult.value) ? pkgsResult.value : []
+      const loadedDests = destsResult.status === 'fulfilled' && Array.isArray(destsResult.value) ? destsResult.value : []
+      const loadedRevs = revsResult.status === 'fulfilled' && Array.isArray(revsResult.value) ? revsResult.value : []
 
       if (pkgsResult.status === 'rejected' && destsResult.status === 'rejected') {
-        throw new Error('Unable to load journeys. Please try again.')
+        throw new Error('Unable to load travel catalog. Please try again.')
       }
 
       setPackages(loadedPkgs)
@@ -223,7 +223,7 @@ export const Packages = () => {
   const filteredPackages = useMemo(() => {
     return packages
       .filter((pkg) => {
-        // 1. Keyword search (case-insensitive across title, description, destination, country)
+        // 1. Keyword search
         if (searchQuery.trim()) {
           const q = searchQuery.trim().toLowerCase()
           const titleMatch = pkg.title?.toLowerCase().includes(q)
@@ -284,7 +284,6 @@ export const Packages = () => {
         }
         if (sortBy === 'duration-asc') return (a.duration || 0) - (b.duration || 0)
         if (sortBy === 'duration-desc') return (b.duration || 0) - (a.duration || 0)
-        // Default: 'featured' preserves existing catalog order
         return 0
       })
   }, [
@@ -318,10 +317,10 @@ export const Packages = () => {
               fontWeight: 600,
               color: '#7dd3fc',
               marginBottom: '1rem',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
             }}
           >
-            <Compass size={16} /> Curated Worldwide Expeditions
+            <Compass size={16} /> Worldwide Travel Itineraries
           </span>
 
           <h1
@@ -345,7 +344,7 @@ export const Packages = () => {
               lineHeight: 1.6,
             }}
           >
-            Discover unforgettable destinations, experiences, and travel packages.
+            Discover unforgettable destinations, transparent pricing, and instant seat confirmation.
           </p>
 
           {/* 2. PROMINENT SEARCH BAR */}
@@ -354,7 +353,7 @@ export const Packages = () => {
             <input
               type="text"
               className="explore-search-input"
-              placeholder="Where do you want to go? Search destinations, tours, or keywords..."
+              placeholder="Search destinations, tours, or keywords..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               aria-label="Search travel packages by destination, title, or keyword"
@@ -385,7 +384,7 @@ export const Packages = () => {
       </section>
 
       {/* 3. MAIN EXPLORE CATALOG CONTENT */}
-      <div className="container" style={{ paddingBottom: '4rem' }}>
+      <div className="container" style={{ paddingBottom: '5rem' }}>
         {/* Top Controls Bar: Result Count, Mobile Filter Trigger, Sort Selector */}
         <div
           style={{
@@ -401,7 +400,7 @@ export const Packages = () => {
         >
           {/* Result Count */}
           <div>
-            <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
               {loading ? (
                 'Loading journeys...'
               ) : (
@@ -671,8 +670,8 @@ export const Packages = () => {
                 <EmptyState
                   icon={Compass}
                   title="No journeys found"
-                  description="Try changing your search or filters."
-                  actionText="Clear Filters"
+                  description="Try adjusting your search criteria or clearing filters to see available travel packages."
+                  actionText="Reset All Filters"
                   onAction={handleResetFilters}
                 />
               ) : (

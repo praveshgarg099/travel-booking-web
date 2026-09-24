@@ -1,23 +1,46 @@
 import React from 'react'
+import { CheckCircle2, Clock, XCircle, AlertTriangle } from 'lucide-react'
 
 export const BookingStatusBadge = ({ status }) => {
-  let badgeClass = 'badge-neutral'
+  const normalized = (status || '').toUpperCase()
 
-  switch (status) {
+  switch (normalized) {
     case 'CONFIRMED':
-      badgeClass = 'badge-success'
-      break
+      return (
+        <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          <CheckCircle2 size={13} />
+          <span>Confirmed</span>
+        </span>
+      )
     case 'PENDING':
-      badgeClass = 'badge-warning'
-      break
+    case 'PENDING_PAYMENT':
+      return (
+        <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          <Clock size={13} />
+          <span>{normalized === 'PENDING_PAYMENT' ? 'Pending Payment' : 'Pending'}</span>
+        </span>
+      )
     case 'CANCELLED':
-      badgeClass = 'badge-danger'
-      break
+      return (
+        <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          <XCircle size={13} />
+          <span>Cancelled</span>
+        </span>
+      )
+    case 'FAILED':
+      return (
+        <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+          <AlertTriangle size={13} />
+          <span>Failed</span>
+        </span>
+      )
     default:
-      badgeClass = 'badge-neutral'
+      return (
+        <span className="badge badge-neutral">
+          {status || 'Unknown'}
+        </span>
+      )
   }
-
-  return <span className={`badge ${badgeClass}`}>{status || 'UNKNOWN'}</span>
 }
 
 export default BookingStatusBadge

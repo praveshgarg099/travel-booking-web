@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { packageService } from '../services/packageService'
 import { destinationService } from '../services/destinationService'
 import { reviewService } from '../services/reviewService'
@@ -15,13 +15,23 @@ import ConfirmationDialog from '../components/common/ConfirmationDialog'
 import { formatCurrency } from '../utils/formatters'
 import { getPackageImage } from '../utils/imageHelper'
 import { getExtendedPackageData } from '../data/demoData'
-import { Clock, Users, MapPin, ArrowLeft, Shield, Award, CheckCircle2, MessageSquarePlus, Star } from 'lucide-react'
+import {
+  Clock,
+  Users,
+  MapPin,
+  ArrowLeft,
+  Shield,
+  CheckCircle2,
+  MessageSquarePlus,
+  Star,
+  Compass,
+  ChevronRight
+} from 'lucide-react'
 
 export const PackageDetails = () => {
   const { id } = useParams()
   const { user, isAuthenticated } = useAuth()
   const toast = useToast()
-  const navigate = useNavigate()
 
   const [pkg, setPkg] = useState(null)
   const [destination, setDestination] = useState(null)
@@ -53,7 +63,7 @@ export const PackageDetails = () => {
         }
       }
 
-      // Fetch reviews for this package directly from backend
+      // Fetch real reviews for this package directly from backend
       try {
         const pkgReviews = await reviewService.getReviewsByPackage(id)
         setReviews(pkgReviews || [])
@@ -84,7 +94,7 @@ export const PackageDetails = () => {
     try {
       setDeleteLoading(true)
       await reviewService.deleteReview(deleteReviewId)
-      toast.success('Review deleted.')
+      toast.success('Review deleted successfully.')
       setReviews((prev) => prev.filter((r) => r.id !== deleteReviewId))
       setDeleteReviewId(null)
     } catch (err) {
@@ -94,7 +104,7 @@ export const PackageDetails = () => {
     }
   }
 
-  // Calculate average rating
+  // Calculate real average rating strictly from backend reviews
   const avgRating = reviews.length
     ? (reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1)
     : null
@@ -105,14 +115,14 @@ export const PackageDetails = () => {
 
   if (errorMsg || !pkg) {
     return (
-      <div className="container" style={{ padding: '4rem 1.5rem' }}>
+      <div className="container" style={{ padding: '4rem 1.5rem', textAlign: 'center' }}>
         <ErrorMessage
           title="Package Not Found"
           message={errorMsg || 'The requested travel package could not be found.'}
           onRetry={fetchPackageData}
         />
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link to="/packages" className="btn btn-secondary btn-sm">
+        <div style={{ marginTop: '1.5rem' }}>
+          <Link to="/packages" className="btn btn-secondary">
             <ArrowLeft size={16} /> Back to Packages
           </Link>
         </div>
@@ -122,54 +132,63 @@ export const PackageDetails = () => {
 
   const extendedData = getExtendedPackageData(pkg.title) || {}
   const imageUrl = extendedData.image || getPackageImage(pkg.id, pkg.title)
+  const isSoldOut = (pkg.availableSeats || 0) <= 0
+
+  const scrollToBooking = () => {
+    const el = document.getElementById('booking-card')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
 
   return (
-    <div style={{ backgroundColor: 'var(--bg-main)', minHeight: '80vh', padding: '2.5rem 0 5rem' }}>
-      <div className="container">
-        {/* Breadcrumb / Back Button */}
-        <div style={{ marginBottom: '1.5rem' }}>
+    <div style={{ backgroundColor: 'var(--bg-main)', minHeight: '85vh', paddingBottom: '5rem' }}>
+      {/* Breadcrumb Header */}
+      <div style={{ backgroundColor: 'var(--white)', borderBottom: '1px solid var(--border-subtle)', padding: '1rem 0' }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+            <Link to="/" style={{ color: 'var(--text-secondary)' }}>Home</Link>
+            <ChevronRight size={14} />
+            <Link to="/packages" style={{ color: 'var(--text-secondary)' }}>Packages</Link>
+            <ChevronRight size={14} />
+            <span style={{ color: 'var(--slate-900)', fontWeight: 600, maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {pkg.title}
+            </span>
+          </nav>
+
           <Link
             to="/packages"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: 'var(--slate-600)',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-            }}
+            className="btn btn-ghost btn-sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
           >
-            <ArrowLeft size={16} /> Back to All Packages
+            <ArrowLeft size={15} /> All Packages
           </Link>
         </div>
+      </div>
 
-        {/* Hero Section: Header Details */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-            {extendedData.category && (
-              <span className="badge badge-secondary" style={{ fontSize: '0.85rem' }}>
-                {extendedData.category}
-              </span>
-            )}
+      <div className="container" style={{ paddingTop: '2rem' }}>
+        {/* Title & Key Highlights Bar */}
+        <div style={{ marginBottom: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
             {destination && (
-              <span className="badge badge-primary" style={{ fontSize: '0.85rem' }}>
+              <span className="badge badge-primary">
                 <MapPin size={13} /> {destination.name}, {destination.country}
               </span>
             )}
-            <span className="badge badge-neutral" style={{ fontSize: '0.85rem' }}>
-              <Clock size={13} /> {pkg.duration} Days Journey
+            <span className="badge badge-neutral">
+              <Clock size={13} /> {pkg.duration} Days / {Math.max(1, pkg.duration - 1)} Nights
             </span>
-            {avgRating ? (
-              <span className="badge badge-warning" style={{ fontSize: '0.85rem' }}>
-                <Star size={13} fill="#b45309" /> {avgRating} ({reviews.length} reviews)
+            <span className={`badge ${isSoldOut ? 'badge-danger' : 'badge-success'}`}>
+              <Users size={13} /> {isSoldOut ? 'Sold Out' : `${pkg.availableSeats} Seats Available`}
+            </span>
+            {avgRating && (
+              <span className="badge badge-warning">
+                <Star size={13} fill="#b45309" /> {avgRating} ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
               </span>
-            ) : extendedData.rating ? (
-              <span className="badge badge-warning" style={{ fontSize: '0.85rem' }}>
-                <Star size={13} fill="#b45309" /> {extendedData.rating} ({extendedData.reviewsCount} reviews)
-              </span>
-            ) : null}
+            )}
           </div>
-          <h1 style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', color: 'var(--slate-900)' }}>
+
+          <h1 style={{ fontSize: 'clamp(1.85rem, 3.2vw, 2.65rem)', fontWeight: 800, color: 'var(--slate-900)', lineHeight: 1.25 }}>
             {pkg.title}
           </h1>
         </div>
@@ -178,7 +197,7 @@ export const PackageDetails = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.6fr 1fr',
+            gridTemplateColumns: 'minmax(0, 1.65fr) minmax(320px, 1fr)',
             gap: '2.5rem',
             alignItems: 'start',
           }}
@@ -186,14 +205,17 @@ export const PackageDetails = () => {
         >
           {/* Left Column: Media & Info */}
           <div>
-            {/* Main Featured Photo */}
+            {/* Featured Image */}
             <div
               className="card"
               style={{
-                height: '420px',
-                marginBottom: '2rem',
+                borderRadius: 'var(--radius-2xl)',
                 overflow: 'hidden',
-                position: 'relative',
+                height: '440px',
+                marginBottom: '2rem',
+                boxShadow: 'var(--shadow-md)',
+                backgroundColor: 'var(--slate-100)',
+                position: 'relative'
               }}
             >
               <img
@@ -201,58 +223,132 @@ export const PackageDetails = () => {
                 alt={pkg.title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(to top, rgba(15,23,42,0.7) 0%, transparent 100%)',
+                  padding: '2rem 1.5rem 1.25rem',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9 }}>
+                    Curated Expeditions
+                  </span>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                    {destination ? `${destination.name}, ${destination.country}` : 'Handcrafted Journey'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: '1rem',
+                marginBottom: '2rem',
+              }}
+            >
+              <div className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-lg)', backgroundColor: '#eff6ff', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Duration</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-900)' }}>{pkg.duration} Days</div>
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-lg)', backgroundColor: '#ecfdf5', color: 'var(--emerald)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Group Capacity</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-900)' }}>{pkg.availableSeats} Remaining</div>
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-lg)', backgroundColor: '#fff7ed', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Shield size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Protection</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-900)' }}>100% Insured</div>
+                </div>
+              </div>
             </div>
 
             {/* Overview & Description */}
             <div className="card" style={{ padding: '2rem', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.4rem', marginBottom: '1rem', color: 'var(--slate-900)' }}>
-                About This Itinerary
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                <Compass size={22} color="var(--primary)" />
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--slate-900)', margin: 0 }}>
+                  About This Itinerary
+                </h2>
+              </div>
+
               <p
                 style={{
                   color: 'var(--slate-700)',
-                  lineHeight: 1.75,
+                  lineHeight: 1.8,
                   fontSize: '1rem',
                   whiteSpace: 'pre-line',
+                  marginBottom: '1.75rem',
                 }}
               >
                 {pkg.description}
               </p>
-              
+
+              {/* Itinerary Schedule if present */}
               {extendedData.itinerary && (
-                <div style={{ marginTop: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--slate-800)' }}>
-                    Daily Schedule
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.85rem', color: 'var(--slate-900)' }}>
+                    Detailed Day-by-Day Schedule
                   </h3>
-                  <div style={{
-                    color: 'var(--slate-700)',
-                    lineHeight: 1.75,
-                    fontSize: '0.95rem',
-                    whiteSpace: 'pre-line',
-                    backgroundColor: 'var(--slate-50)',
-                    padding: '1rem 1.5rem',
-                    borderRadius: 'var(--radius-lg)'
-                  }}>
+                  <div
+                    style={{
+                      color: 'var(--slate-700)',
+                      lineHeight: 1.75,
+                      fontSize: '0.95rem',
+                      whiteSpace: 'pre-line',
+                      backgroundColor: 'var(--slate-50)',
+                      padding: '1.25rem 1.5rem',
+                      borderRadius: 'var(--radius-xl)',
+                      border: '1px solid var(--border-subtle)',
+                    }}
+                  >
                     {extendedData.itinerary}
                   </div>
                 </div>
               )}
 
-              {/* Inclusions */}
-              <div
-                style={{
-                  marginTop: '2rem',
-                  paddingTop: '1.5rem',
-                  borderTop: '1px solid var(--border-subtle)',
-                }}
-              >
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--slate-800)' }}>
-                  Package Highlights & Amenities
+              {/* Inclusions / Highlights */}
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.75rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--slate-900)' }}>
+                  Inclusions & Traveler Amenities
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-                  {(extendedData.highlights || ['Verified accommodations', 'Dedicated travel guide', 'Daily breakfast included', 'Airport transfers']).map((highlight, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--slate-700)', fontSize: '0.9rem' }}>
-                      <CheckCircle2 size={18} color="var(--emerald)" /> {highlight}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+                  {(extendedData.highlights || [
+                    'Handpicked luxury hotel accommodations',
+                    'Dedicated English-speaking tour concierge',
+                    'Daily complimentary breakfast & select gourmet meals',
+                    'Private AC transportation & airport transfers',
+                    'Monument access permits & entry tickets',
+                    '24/7 dedicated traveler support helpline'
+                  ]).map((highlight, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--slate-700)', fontSize: '0.9rem' }}>
+                      <CheckCircle2 size={17} color="var(--emerald)" style={{ flexShrink: 0 }} />
+                      <span>{highlight}</span>
                     </div>
                   ))}
                 </div>
@@ -261,14 +357,22 @@ export const PackageDetails = () => {
 
             {/* Destination Spotlight */}
             {destination && (
-              <div className="card" style={{ padding: '2rem', marginBottom: '2rem', backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+              <div
+                className="card"
+                style={{
+                  padding: '2rem',
+                  marginBottom: '2rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
                   <MapPin size={22} color="var(--primary)" />
-                  <h2 style={{ fontSize: '1.3rem', color: 'var(--primary-dark)' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--slate-900)', margin: 0 }}>
                     Destination: {destination.name}, {destination.country}
                   </h2>
                 </div>
-                <p style={{ color: 'var(--slate-700)', lineHeight: 1.6, fontSize: '0.95rem' }}>
+                <p style={{ color: 'var(--slate-700)', lineHeight: 1.7, fontSize: '0.95rem', margin: 0 }}>
                   {destination.description}
                 </p>
               </div>
@@ -283,17 +387,19 @@ export const PackageDetails = () => {
                   alignItems: 'center',
                   marginBottom: '1.5rem',
                   flexWrap: 'wrap',
-                  gap: '0.75rem',
+                  gap: '1rem',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  paddingBottom: '1.25rem',
                 }}
               >
                 <div>
-                  <h2 style={{ fontSize: '1.35rem', color: 'var(--slate-900)' }}>
-                    Traveler Reviews ({reviews.length})
+                  <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--slate-900)', margin: 0 }}>
+                    Verified Traveler Reviews ({reviews.length})
                   </h2>
                   {avgRating && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem' }}>
                       <StarRating rating={Math.round(Number(avgRating))} size={16} />
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate-800)' }}>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-800)' }}>
                         {avgRating} out of 5
                       </span>
                     </div>
@@ -323,7 +429,7 @@ export const PackageDetails = () => {
                     border: '1px solid var(--slate-200)',
                   }}
                 >
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--slate-900)' }}>
                     {editingReview ? 'Edit Your Review' : 'Share Your Travel Experience'}
                   </h3>
                   <ReviewForm
@@ -350,36 +456,60 @@ export const PackageDetails = () => {
 
               {/* Reviews List */}
               {reviews.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)' }}>
-                  <p style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>
-                    No reviews for this travel package yet.
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--slate-100)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                    <Star size={20} color="var(--slate-400)" />
+                  </div>
+                  <p style={{ fontWeight: 600, color: 'var(--slate-700)', marginBottom: '0.25rem', fontSize: '1rem' }}>
+                    No traveler reviews yet
                   </p>
-                  <p style={{ fontSize: '0.85rem' }}>
-                    Be the first traveler to share feedback!
+                  <p style={{ fontSize: '0.875rem', margin: 0 }}>
+                    Be the first verified traveler to experience this journey and share feedback!
                   </p>
                 </div>
               ) : (
-                reviews.map((rev) => (
-                  <ReviewCard
-                    key={rev.id}
-                    review={rev}
-                    currentUserId={user?.id}
-                    onEdit={(r) => {
-                      setEditingReview(r)
-                      setShowReviewForm(false)
-                    }}
-                    onDelete={(revId) => setDeleteReviewId(revId)}
-                  />
-                ))
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {reviews.map((rev) => (
+                    <ReviewCard
+                      key={rev.id}
+                      review={rev}
+                      currentUserId={user?.id}
+                      onEdit={(r) => {
+                        setEditingReview(r)
+                        setShowReviewForm(false)
+                      }}
+                      onDelete={(revId) => setDeleteReviewId(revId)}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Right Column: Booking Form Widget */}
-          <div>
+          {/* Right Column: Sticky Booking Widget */}
+          <div id="booking-card">
             <BookingForm travelPackage={pkg} />
           </div>
         </div>
+      </div>
+
+      {/* Mobile Sticky Booking Bar */}
+      <div className="mobile-booking-bar">
+        <div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', display: 'block' }}>Total Price</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+            {formatCurrency(pkg.price)}
+          </span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}> / person</span>
+        </div>
+        <button
+          onClick={scrollToBooking}
+          disabled={isSoldOut}
+          className="btn btn-primary"
+          style={{ padding: '0.65rem 1.5rem', fontWeight: 700 }}
+        >
+          {isSoldOut ? 'Sold Out' : 'Book Journey'}
+        </button>
       </div>
 
       {/* Confirmation modal for review deletion */}
@@ -388,15 +518,33 @@ export const PackageDetails = () => {
         onClose={() => setDeleteReviewId(null)}
         onConfirm={handleConfirmDeleteReview}
         title="Delete Review"
-        message="Are you sure you want to remove your review? This cannot be undone."
+        message="Are you sure you want to remove your review? This action cannot be undone."
         confirmText="Delete Review"
         loading={deleteLoading}
       />
 
       <style>{`
+        .mobile-booking-bar {
+          display: none;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background-color: var(--white);
+          padding: 0.85rem 1.25rem;
+          box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
+          z-index: 900;
+          align-items: center;
+          justify-content: space-between;
+          border-top: 1px solid var(--border-subtle);
+        }
+
         @media (max-width: 900px) {
           .package-detail-grid {
             grid-template-columns: 1fr !important;
+          }
+          .mobile-booking-bar {
+            display: flex;
           }
         }
       `}</style>

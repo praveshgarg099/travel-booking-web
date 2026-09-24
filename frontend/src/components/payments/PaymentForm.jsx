@@ -3,7 +3,7 @@ import { paymentService } from '../../services/paymentService'
 import { loadRazorpayScript } from '../../utils/loadRazorpay'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { useToast } from '../../context/ToastContext'
-import { CreditCard, Smartphone, Banknote, Building2, ShieldCheck, CheckCircle2, Lock } from 'lucide-react'
+import { Smartphone, Banknote, ShieldCheck, CheckCircle2, Lock } from 'lucide-react'
 
 export const PaymentForm = ({ booking, packageDetails, onPaymentSuccess }) => {
   const toast = useToast()

@@ -1,67 +1,26 @@
 import React from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, Link } from 'react-router-dom'
 import Navbar from '../components/common/Navbar'
 import Footer from '../components/common/Footer'
-import { ShieldCheck, Package, MapPin, Users, LayoutDashboard, AlertTriangle, CreditCard, Calendar, Star } from 'lucide-react'
+import { ShieldCheck, Package, MapPin, Users, LayoutDashboard, CreditCard, Calendar, Star, ChevronRight, ExternalLink } from 'lucide-react'
 
 export const AdminLayout = () => {
   const adminNavItems = [
     { to: '/admin', label: 'Admin Overview', icon: LayoutDashboard, end: true },
-    { to: '/admin/packages', label: 'Packages', icon: Package },
-    { to: '/admin/destinations', label: 'Manage Destinations', icon: MapPin },
-    { to: '/admin/bookings', label: 'Manage Bookings', icon: Calendar },
-    { to: '/admin/payments', label: 'Manage Payments', icon: CreditCard },
-    { to: '/admin/users', label: 'Manage Users', icon: Users },
-    { to: '/admin/reviews', label: 'Manage Reviews', icon: Star },
+    { to: '/admin/packages', label: 'Travel Packages', icon: Package },
+    { to: '/admin/destinations', label: 'Destinations', icon: MapPin },
+    { to: '/admin/bookings', label: 'All Bookings', icon: Calendar },
+    { to: '/admin/payments', label: 'Payment Audit', icon: CreditCard },
+    { to: '/admin/users', label: 'User Directory', icon: Users },
+    { to: '/admin/reviews', label: 'Review Moderation', icon: Star },
   ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
       <Navbar />
-      <div style={{ flex: 1, backgroundColor: 'var(--bg-main)', padding: '2.5rem 0' }}>
-        <div className="container">
-          {/* Admin Header Banner */}
-          <div
-            className="card"
-            style={{
-              padding: '1.75rem 2rem',
-              marginBottom: '2rem',
-              background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)',
-              color: 'var(--white)',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <ShieldCheck size={20} color="#7dd3fc" />
-                <span
-                  style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    color: '#bae6fd',
-                  }}
-                >
-                  Admin Control Center
-                </span>
-              </div>
-              <h1 style={{ color: 'var(--white)', fontSize: '1.85rem' }}>System Administration</h1>
-              <p style={{ color: '#e0f2fe', fontSize: '0.925rem', marginTop: '0.25rem' }}>
-                Create travel packages, coordinate destinations, and administer user records directly in Spring Boot.
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span className="badge badge-warning" style={{ padding: '0.45rem 0.85rem' }}>
-                Full Access
-              </span>
-            </div>
-          </div>
 
+      <div style={{ flex: 1, padding: '2rem 0 4rem' }}>
+        <div className="container">
           {/* Admin Layout Grid */}
           <div
             style={{
@@ -76,24 +35,52 @@ export const AdminLayout = () => {
             <aside
               className="card"
               style={{
-                padding: '1rem',
+                padding: '1.25rem',
                 position: 'sticky',
                 top: '90px',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-subtle)',
               }}
             >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.5rem 1rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '0.75rem' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    backgroundColor: '#eff6ff',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--slate-900)' }}>
+                    Admin Console
+                  </div>
+                  <span className="badge badge-warning" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
+                    Superuser
+                  </span>
+                </div>
+              </div>
+
               <div
                 style={{
-                  fontSize: '0.775rem',
+                  fontSize: '0.7rem',
                   fontWeight: 700,
-                  color: 'var(--slate-400)',
+                  color: 'var(--text-muted)',
                   textTransform: 'uppercase',
-                  padding: '0.5rem 0.75rem',
+                  padding: '0.4rem 0.5rem',
                   letterSpacing: '0.05em',
                 }}
               >
-                Admin Navigation
+                Management
               </div>
-              <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {adminNavItems.map((item) => {
                   const Icon = item.icon
                   return (
@@ -104,22 +91,36 @@ export const AdminLayout = () => {
                       style={({ isActive }) => ({
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'space-between',
                         gap: '0.75rem',
-                        padding: '0.75rem 1rem',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '0.925rem',
+                        padding: '0.7rem 0.85rem',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: '0.9rem',
                         fontWeight: 600,
                         color: isActive ? 'var(--primary-dark)' : 'var(--slate-700)',
                         backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
                         transition: 'all 0.15s ease',
                       })}
                     >
-                      <Icon size={18} />
-                      {item.label}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <Icon size={17} />
+                        <span>{item.label}</span>
+                      </div>
+                      <ChevronRight size={14} style={{ opacity: 0.6 }} />
                     </NavLink>
                   )
                 })}
               </nav>
+
+              <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '1.25rem', paddingTop: '1rem' }}>
+                <Link
+                  to="/packages"
+                  className="btn btn-ghost btn-sm btn-block"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                >
+                  <ExternalLink size={14} /> View Live Storefront
+                </Link>
+              </div>
             </aside>
 
             {/* Admin Main Content */}
@@ -129,6 +130,7 @@ export const AdminLayout = () => {
           </div>
         </div>
       </div>
+
       <Footer />
 
       <style>{`

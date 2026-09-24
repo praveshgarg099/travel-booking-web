@@ -43,12 +43,11 @@ export const VerifyEmail = () => {
   }, [])
 
   const handleDigitChange = (index, value) => {
-    // Only accept numbers
     const cleanVal = value.replace(/[^0-9]/g, '')
     const newDigits = [...codeDigits]
 
     if (cleanVal.length > 1) {
-      // Handle paste of whole code
+      // Handle paste of full code into single input
       const pasted = cleanVal.slice(0, 6).split('')
       pasted.forEach((char, i) => {
         newDigits[i] = char
@@ -71,7 +70,6 @@ export const VerifyEmail = () => {
   const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace') {
       if (!codeDigits[index] && index > 0) {
-        // If current box is empty, delete previous and move back
         const newDigits = [...codeDigits]
         newDigits[index - 1] = ''
         setCodeDigits(newDigits)
@@ -143,7 +141,7 @@ export const VerifyEmail = () => {
         navigate('/login', { replace: true })
         return
       }
-      toast.success('A new 6-digit verification code has been dispatched!')
+      toast.success('A fresh 6-digit verification code has been dispatched!')
       setResendCooldown(60)
       setCodeDigits(['', '', '', '', '', ''])
       inputRefs.current[0]?.focus()
@@ -152,12 +150,10 @@ export const VerifyEmail = () => {
       const msg = err.message || 'Failed to resend verification code.'
       setErrorMsg(msg)
       toast.error(msg)
-      // Check if server response specified remaining cooldown seconds
       const match = msg.match(/wait (\d+) seconds/i)
       if (match) {
         setResendCooldown(parseInt(match[1], 10))
       }
-      // If resend failed for other reasons (e.g. SMTP 503, invalid email), do NOT start cooldown!
     } finally {
       setResending(false)
     }
@@ -168,21 +164,32 @@ export const VerifyEmail = () => {
       <div
         style={{
           backgroundColor: 'var(--bg-main)',
-          minHeight: '80vh',
+          minHeight: '82vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '3rem 1.5rem',
         }}
       >
-        <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem 2rem', textAlign: 'center', boxShadow: 'var(--shadow-xl)' }}>
+        <div
+          className="card"
+          style={{
+            maxWidth: '480px',
+            width: '100%',
+            padding: '2.5rem 2rem',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-xl)',
+            borderRadius: 'var(--radius-2xl)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
           <div
             style={{
               width: '56px',
               height: '56px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              color: 'var(--white)',
+              backgroundColor: '#ecfdf5',
+              color: 'var(--emerald)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -191,12 +198,12 @@ export const VerifyEmail = () => {
           >
             <ShieldCheck size={32} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Already Verified</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: '0.75rem 0 1.5rem' }}>
-            Your Yatramigo account ({currentUser.email}) is already verified and ready to use.
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--slate-900)' }}>Account Verified</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: '0.75rem 0 1.5rem', lineHeight: 1.5 }}>
+            Your Yatramigo account (<strong>{currentUser.email}</strong>) is fully verified and active.
           </p>
           <Link to={currentUser.role === 'ADMIN' ? '/admin' : '/dashboard'} className="btn btn-primary btn-block btn-lg">
-            Go to {currentUser.role === 'ADMIN' ? 'Admin Portal' : 'Dashboard'}
+            Go to {currentUser.role === 'ADMIN' ? 'Admin Portal' : 'Traveler Dashboard'}
           </Link>
         </div>
       </div>
@@ -207,35 +214,48 @@ export const VerifyEmail = () => {
     <div
       style={{
         backgroundColor: 'var(--bg-main)',
-        minHeight: '80vh',
+        minHeight: '82vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '3rem 1.5rem',
       }}
     >
-      <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem 2rem', boxShadow: 'var(--shadow-xl)' }}>
+      <div
+        className="card"
+        style={{
+          maxWidth: '480px',
+          width: '100%',
+          padding: '2.5rem 2.25rem',
+          boxShadow: 'var(--shadow-xl)',
+          borderRadius: 'var(--radius-2xl)',
+          border: '1px solid var(--border-subtle)',
+          backgroundColor: 'var(--white)',
+        }}
+      >
         {/* Header Branding */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, var(--primary), #0284c7)',
+              width: '52px',
+              height: '52px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
               color: 'var(--white)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.25rem',
-              boxShadow: '0 6px 16px rgba(2, 132, 199, 0.35)',
+              boxShadow: '0 8px 16px rgba(2, 132, 199, 0.25)',
             }}
           >
-            <MailCheck size={30} />
+            <MailCheck size={28} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', color: 'var(--slate-900)' }}>Verify Your Email</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--slate-900)', letterSpacing: '-0.02em', margin: 0 }}>
+            Verify Your Email
+          </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.4rem', lineHeight: 1.5 }}>
-            We sent a 6-digit verification code to
+            We've sent a 6-digit confirmation code to
           </p>
 
           {/* Email badge / edit toggle */}
@@ -244,16 +264,17 @@ export const VerifyEmail = () => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              background: 'var(--primary-light)',
-              color: 'var(--primary)',
-              padding: '0.35rem 0.85rem',
+              background: '#eff6ff',
+              color: 'var(--primary-dark)',
+              padding: '0.4rem 0.9rem',
               borderRadius: '999px',
               fontWeight: 600,
-              fontSize: '0.9rem',
-              marginTop: '0.5rem',
+              fontSize: '0.875rem',
+              marginTop: '0.65rem',
+              border: '1px solid #bfdbfe',
             }}
           >
-            <Mail size={15} />
+            <Mail size={14} />
             <span>{email || 'your email'}</span>
             <button
               type="button"
@@ -266,6 +287,7 @@ export const VerifyEmail = () => {
                 fontSize: '0.75rem',
                 textDecoration: 'underline',
                 marginLeft: '0.25rem',
+                fontWeight: 700,
               }}
             >
               {isEditingEmail ? 'Done' : 'Change'}
@@ -276,7 +298,7 @@ export const VerifyEmail = () => {
         {/* Editable email input if toggled */}
         {isEditingEmail && (
           <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-            <label className="form-label" htmlFor="verifyEmailInput">
+            <label className="form-label" htmlFor="verifyEmailInput" style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
               Email Address
             </label>
             <input
@@ -297,14 +319,15 @@ export const VerifyEmail = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'var(--rose-light)',
-              color: 'var(--rose)',
+              gap: '0.6rem',
+              padding: '0.85rem 1rem',
+              backgroundColor: '#fee2e2',
+              color: '#b91c1c',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.875rem',
               marginBottom: '1.5rem',
               fontWeight: 500,
+              border: '1px solid #fca5a5',
             }}
           >
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
@@ -317,14 +340,14 @@ export const VerifyEmail = () => {
           <div style={{ marginBottom: '1.5rem' }}>
             <label
               className="form-label"
-              style={{ textAlign: 'center', display: 'block', marginBottom: '0.75rem' }}
+              style={{ textAlign: 'center', display: 'block', marginBottom: '0.85rem', fontWeight: 600, color: 'var(--slate-800)' }}
             >
-              Enter 6-Digit Code
+              Enter Verification Code
             </label>
             <div
               style={{
                 display: 'flex',
-                gap: '0.5rem',
+                gap: '0.6rem',
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
@@ -342,19 +365,20 @@ export const VerifyEmail = () => {
                   onKeyDown={(e) => handleKeyDown(idx, e)}
                   onPaste={handlePaste}
                   disabled={loading}
+                  aria-label={`Digit ${idx + 1}`}
                   style={{
-                    width: '50px',
+                    width: '48px',
                     height: '56px',
                     fontSize: '1.5rem',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     textAlign: 'center',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: 'var(--radius-lg)',
                     border: digit ? '2px solid var(--primary)' : '1.5px solid var(--border-subtle)',
                     backgroundColor: digit ? 'var(--white)' : 'var(--slate-50)',
                     color: 'var(--slate-900)',
                     outline: 'none',
                     transition: 'all 0.15s ease',
-                    boxShadow: digit ? '0 0 0 3px rgba(2, 132, 199, 0.12)' : 'none',
+                    boxShadow: digit ? '0 0 0 3px rgba(2, 132, 199, 0.15)' : 'none',
                   }}
                 />
               ))}
@@ -365,14 +389,14 @@ export const VerifyEmail = () => {
             type="submit"
             className="btn btn-primary btn-block btn-lg"
             disabled={loading || codeDigits.join('').length !== 6}
-            style={{ marginTop: '1rem' }}
+            style={{ fontWeight: 700, padding: '0.85rem 1rem' }}
           >
             {loading ? (
               'Verifying Code...'
             ) : (
               <>
                 <span>Verify & Continue</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={17} />
               </>
             )}
           </button>
@@ -389,7 +413,7 @@ export const VerifyEmail = () => {
         >
           Didn't receive the email?{' '}
           {resendCooldown > 0 ? (
-            <span style={{ fontWeight: 600, color: 'var(--slate-600)' }}>
+            <span style={{ fontWeight: 600, color: 'var(--slate-700)' }}>
               Resend code in {resendCooldown}s
             </span>
           ) : (
@@ -401,7 +425,7 @@ export const VerifyEmail = () => {
                 background: 'transparent',
                 border: 'none',
                 color: 'var(--primary)',
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: resending ? 'not-allowed' : 'pointer',
                 padding: 0,
                 display: 'inline-flex',
@@ -419,9 +443,9 @@ export const VerifyEmail = () => {
         {import.meta.env.DEV && (
           <div
             style={{
-              marginTop: '2rem',
+              marginTop: '1.75rem',
               padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
+              borderRadius: 'var(--radius-lg)',
               backgroundColor: 'var(--slate-50)',
               border: '1px solid var(--border-subtle)',
               fontSize: '0.8rem',
@@ -429,6 +453,7 @@ export const VerifyEmail = () => {
               display: 'flex',
               alignItems: 'flex-start',
               gap: '0.5rem',
+              lineHeight: 1.5,
             }}
           >
             <ShieldCheck size={16} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
@@ -450,7 +475,7 @@ export const VerifyEmail = () => {
           }}
         >
           Already verified?{' '}
-          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>
+          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 700 }}>
             Sign In
           </Link>
         </div>
